@@ -832,6 +832,8 @@ async function saveAccountantSettings() {
   STATE.settings = { accountant_name: accName, accountant_email: accEmail, payroll_day: payDay };
   showToast('Accountant details saved');
 }
+
+async function pageAttendance(el) {
   el.innerHTML = `<div class="page-header"><div class="page-title">Attendance</div><div class="page-sub">Today · ${formatDate(TODAY)}</div></div><div class="loading">Loading check-ins...</div>`;
   const { data: checkins } = await sb.from('check_ins').select('*, staff(name,color,color_light)').eq('org_id', STATE.org.id).eq('date', todayStr);
   const ci = checkins || [];
