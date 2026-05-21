@@ -489,29 +489,32 @@ async function doRegister() {
   if (!name || !org || !email || !pw) { err.textContent = 'Please fill in all fields.'; err.classList.add('show'); return; }
   if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.classList.add('show'); return; }
 
-  const { data, error } = await sb.auth.signUp({ email, password: pw });
-  if (error) { err.textContent = error.message; err.classList.add('show'); return; }
-
-  // Create organisation with actual name
-  const { data: orgData, error: orgErr } = await sb.from('organisations').insert({ name: org, business_type: type }).select().single();
-  if (orgErr) { err.textContent = 'Error creating organisation: ' + orgErr.message; err.classList.add('show'); return; }
-
-  // Create admin record with actual name
-  const { error: adminErr } = await sb.from('admins').insert({ org_id: orgData.id, email, name, role: 'admin' });
-  if (adminErr) { err.textContent = 'Error creating admin: ' + adminErr.message; err.classList.add('show'); return; }
-
-  // Create subscription (14-day trial)
-  await sb.from('subscriptions').insert({ org_id: orgData.id, plan: 'starter', status: 'trial' });
-
-  // Auto login — no email confirmation needed
-  if (data.user) {
-    await loadUserAndStart(data.user);
-  } else {
-    // Sign in manually if user not returned
-    const { data: signInData, error: signInErr } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (signInErr) { err.textContent = 'Account created — please sign in.'; err.classList.add('show'); showScreen('loginScreen'); return; }
-    await loadUserAndStart(signInData.user);
+  // Check if already applied
+  const { data: existing } = await sb.from('pending_signups').select('id,status').eq('email', email);
+  if (existing && existing.length > 0) {
+    const s = existing[0].status;
+    if (s === 'pending') { err.textContent = 'You have already applied. We will be in touch within 24 hours.'; err.classList.add('show'); return; }
+    if (s === 'rejected') { err.textContent = 'Your application was not approved. Please contact us for more information.'; err.classList.add('show'); return; }
   }
+
+  // Check if already has an account
+  const { data: existingAdmin } = await sb.from('admins').select('id').eq('email', email);
+  if (existingAdmin && existingAdmin.length > 0) {
+    err.textContent = 'An account with this email already exists. Please sign in.'; err.classList.add('show'); return;
+  }
+
+  // Save to pending signups
+  const { error } = await sb.from('pending_signups').insert({
+    name, business_name: org, business_type: type, email,
+    password_hash: pw, status: 'pending'
+  });
+  if (error) { err.textContent = 'Error submitting application: ' + error.message; err.classList.add('show'); return; }
+
+  // Show success
+  suc.textContent = '✓ Application received! We will review your account and be in touch within 24 hours.';
+  suc.classList.add('show');
+  // Clear form
+  ['regName','regOrg','regEmail','regPassword'].forEach(id => document.getElementById(id).value = '');
 }
 
 async function loadUserAndStart(user) {
