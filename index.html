@@ -394,8 +394,11 @@ async function doLogin() {
   const err = document.getElementById('loginError');
   err.classList.remove('show');
   if (!email || !pw) { err.textContent = 'Please enter your email and password.'; err.classList.add('show'); return; }
+  console.log('Attempting login for:', email);
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  console.log('Auth result:', data, error);
   if (error) { err.textContent = error.message; err.classList.add('show'); return; }
+  console.log('Auth user:', data.user);
   await loadUserAndStart(data.user);
 }
 
@@ -414,42 +417,37 @@ async function doRegister() {
   const { data, error } = await sb.auth.signUp({ email, password: pw });
   if (error) { err.textContent = error.message; err.classList.add('show'); return; }
 
-  // Create organisation
+  // Create organisation with actual name
   const { data: orgData, error: orgErr } = await sb.from('organisations').insert({ name: org, business_type: type }).select().single();
   if (orgErr) { err.textContent = 'Error creating organisation: ' + orgErr.message; err.classList.add('show'); return; }
 
-  // Create admin record
-  await sb.from('admins').insert({ org_id: orgData.id, email, name, role: 'admin' });
+  // Create admin record with actual name
+  const { error: adminErr } = await sb.from('admins').insert({ org_id: orgData.id, email, name, role: 'admin' });
+  if (adminErr) { err.textContent = 'Error creating admin: ' + adminErr.message; err.classList.add('show'); return; }
 
   // Create subscription (14-day trial)
   await sb.from('subscriptions').insert({ org_id: orgData.id, plan: 'starter', status: 'trial' });
 
-  suc.textContent = 'Account created! Please check your email to verify, then sign in.';
-  suc.classList.add('show');
+  // Auto login — no email confirmation needed
+  if (data.user) {
+    await loadUserAndStart(data.user);
+  } else {
+    // Sign in manually if user not returned
+    const { data: signInData, error: signInErr } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (signInErr) { err.textContent = 'Account created — please sign in.'; err.classList.add('show'); showScreen('loginScreen'); return; }
+    await loadUserAndStart(signInData.user);
+  }
 }
 
 async function loadUserAndStart(user) {
   STATE.user = user;
-  // Load admin record — try up to 3 times with small delay
   let adminData = null;
   for (let i = 0; i < 3; i++) {
-    const { data, error } = await sb.from('admins').select('*').eq('email', user.email);
+    const { data } = await sb.from('admins').select('*').eq('email', user.email);
     if (data && data.length > 0) { adminData = data[0]; break; }
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 600));
   }
-  if (!adminData) {
-    // Auto-create admin record if missing
-    const { data: orgData } = await sb.from('organisations').insert({ name: 'My Business', business_type: 'other' }).select().single();
-    if (orgData) {
-      const { data: newAdmin } = await sb.from('admins').insert({ org_id: orgData.id, email: user.email, name: user.email.split('@')[0], role: 'admin' }).select().single();
-      await sb.from('subscriptions').insert({ org_id: orgData.id, plan: 'starter', status: 'trial' });
-      adminData = newAdmin;
-      if (!adminData) { showToast('Setup error. Please try again.'); doLogout(); return; }
-    } else {
-      showToast('Account not found. Please register.'); doLogout(); return;
-    }
-  }
-  // Load org separately
+  if (!adminData) { showToast('Account not found. Please register.'); doLogout(); return; }
   const { data: orgData } = await sb.from('organisations').select('*').eq('id', adminData.org_id).single();
   STATE.admin = adminData;
   STATE.org = orgData;
