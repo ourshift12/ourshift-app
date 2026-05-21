@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OurShift — Staff Management</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f5f4f0;
+  --bg: #f7f6f2;
   --surface: #ffffff;
   --surface2: #f0efe9;
   --border: rgba(0,0,0,0.08);
@@ -16,9 +16,11 @@
   --text: #1a1916;
   --text2: #6b6a65;
   --text3: #9e9d98;
-  --teal: #e8440a;
-  --teal-light: #fff1ec;
-  --teal-mid: #f05a22;
+  --brand: #e8440a;
+  --brand-light: #fff1ec;
+  --brand-mid: #f05a22;
+  --green: #2e7d32;
+  --green-light: #eaf4ea;
   --amber: #b86b00;
   --amber-light: #fef3e0;
   --red: #c0392b;
@@ -27,261 +29,286 @@
   --blue-light: #e8f0fb;
   --purple: #5b3fa8;
   --purple-light: #eeebfc;
-  --green: #2e7d32;
-  --green-light: #eaf4ea;
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
-button { font-family: inherit; cursor: pointer; border: none; outline: none; }
-input, select, textarea { font-family: inherit; outline: none; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none}
 
-/* Layout */
-.app { display: flex; min-height: 100vh; }
-.sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform .2s; }
-.main { margin-left: 220px; flex: 1; min-height: 100vh; }
-.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-.content { padding: 24px; }
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.auth-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:40px;width:100%;max-width:420px;box-shadow:var(--shadow)}
+.auth-logo{font-size:24px;font-weight:600;color:var(--brand);margin-bottom:4px;letter-spacing:-.5px}
+.auth-tagline{font-size:13px;color:var(--text2);margin-bottom:32px}
+.auth-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;display:block}
+.form-input{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);color:var(--text);transition:border .15s}
+.form-input:focus{border-color:var(--brand)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6a65' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.btn-brand{width:100%;padding:12px;background:var(--brand);color:white;border-radius:var(--radius-sm);font-size:15px;font-weight:500;transition:all .15s;margin-top:8px}
+.btn-brand:hover{background:#d03a08}
+.auth-switch{text-align:center;margin-top:20px;font-size:13px;color:var(--text2)}
+.auth-switch a{color:var(--brand);text-decoration:none;font-weight:500;cursor:pointer}
+.auth-error{background:var(--red-light);color:var(--red);padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;display:none}
+.auth-error.show{display:block}
+.auth-success{background:var(--green-light);color:var(--green);padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;display:none}
+.auth-success.show{display:block}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider-text{font-size:12px;color:var(--text3)}
 
-/* Sidebar */
-.logo { padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
-.logo-mark { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -.5px; }
-.logo-sub { font-size: 11px; color: var(--text3); margin-top: 1px; font-family: 'DM Mono', monospace; }
-.nav-section { padding: 12px 10px 4px; font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); margin: 1px 8px; cursor: pointer; color: var(--text2); font-size: 13.5px; font-weight: 400; transition: all .15s; }
-.nav-item:hover { background: var(--surface2); color: var(--text); }
-.nav-item.active { background: var(--teal-light); color: var(--teal); font-weight: 500; }
-.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-.nav-badge { margin-left: auto; background: var(--red); color: white; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 20px; }
-.role-switcher { margin: auto 0 0; padding: 12px; border-top: 1px solid var(--border); }
-.role-btn { width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text2); display: flex; align-items: center; gap: 8px; transition: all .15s; }
-.role-btn:hover { background: var(--surface2); }
-.role-dot { width: 8px; height: 8px; border-radius: 50%; }
+/* APP LAYOUT */
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
+.main{margin-left:220px;flex:1;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.content{padding:24px}
+.logo{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{font-size:18px;font-weight:600;color:var(--brand);letter-spacing:-.5px}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);margin:1px 8px;cursor:pointer;color:var(--text2);font-size:13.5px;font-weight:400;transition:all .15s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--brand-light);color:var(--brand);font-weight:500}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-section{padding:12px 10px 4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.nav-badge{margin-left:auto;background:var(--red);color:white;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px}
+.sidebar-footer{margin:auto 0 0;padding:12px;border-top:1px solid var(--border)}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius-sm)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--brand-light);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.user-name{font-size:13px;font-weight:500}
+.user-role{font-size:11px;color:var(--text2)}
+.logout-btn{margin-left:auto;background:none;font-size:11px;color:var(--text3);padding:4px 8px;border-radius:6px;border:1px solid var(--border)}
+.logout-btn:hover{background:var(--surface2);color:var(--text)}
 
-/* Mobile nav */
-.mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 100; padding: 6px 0 8px; }
-.mobile-nav-items { display: flex; justify-content: space-around; }
-.mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 10px; cursor: pointer; color: var(--text3); font-size: 10px; border-radius: var(--radius-sm); transition: all .15s; }
-.mobile-nav-item.active { color: var(--teal); }
-.mobile-nav-item svg { width: 20px; height: 20px; }
+/* CARDS & LAYOUT */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:20px}
+.card-sm{padding:14px 16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+.stat-val{font-size:28px;font-weight:600;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:12px;color:var(--text2)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-brand{background:var(--brand-light);color:var(--brand)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+.btn{padding:9px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.btn-primary{background:var(--brand);color:white;border:none}
+.btn-primary:hover{background:#d03a08}
+.btn-secondary{background:var(--surface);border:1px solid var(--border2);color:var(--text)}
+.btn-secondary:hover{background:var(--surface2)}
+.btn-success{background:var(--green-light);color:var(--green);border:1px solid rgba(46,125,50,.15)}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid rgba(192,57,43,.15)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+.page-header{margin-bottom:20px}
+.page-title{font-size:22px;font-weight:600;letter-spacing:-.3px}
+.page-sub{font-size:13px;color:var(--text2);margin-top:3px}
+.flex{display:flex}
+.flex-center{display:flex;align-items:center}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.gap-8{gap:8px}
+.gap-12{gap:12px}
+.gap-16{gap:16px}
+.mt-8{margin-top:8px}
+.mt-12{margin-top:12px}
+.mt-16{margin-top:16px}
+.mt-20{margin-top:20px}
+.mb-8{margin-bottom:8px}
+.mb-12{margin-bottom:12px}
+.mb-16{margin-bottom:16px}
+.text-sm{font-size:12px}
+.text-xs{font-size:11px}
+.text-muted{color:var(--text2)}
+.font-mono{font-family:'DM Mono',monospace}
+.font-600{font-weight:600}
+.divider-h{height:1px;background:var(--border);margin:16px 0}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.table-wrap{overflow-x:auto}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-header{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px 24px 24px}
+.modal-title{font-size:17px;font-weight:600}
+.modal-close{width:28px;height:28px;border-radius:6px;background:var(--surface2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:white;padding:12px 18px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:500;z-index:999;display:none;box-shadow:var(--shadow)}
+.toast.show{display:block;animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.progress-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:var(--brand);transition:width .3s}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.3}
+.empty-title{font-size:16px;font-weight:500;color:var(--text);margin-bottom:6px}
+.empty-sub{font-size:13px}
+.loading{text-align:center;padding:40px;color:var(--text2)}
+.rota-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:2px}
+.rota-head{font-size:11px;font-weight:600;color:var(--text3);text-align:center;padding:8px 4px;text-transform:uppercase;letter-spacing:.04em}
+.rota-cell{border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;font-weight:500;min-height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .1s}
+.rota-cell:hover{opacity:.8}
+.rota-work{background:var(--brand-light);color:var(--brand)}
+.rota-off{background:var(--surface2);color:var(--text3)}
+.rota-leave{background:var(--amber-light);color:var(--amber)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-head{font-size:11px;font-weight:600;color:var(--text3);text-align:center;padding:8px;text-transform:uppercase;letter-spacing:.04em}
+.cal-cell{min-height:90px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface)}
+.cal-cell.today{background:var(--brand-light);border-color:var(--brand-mid)}
+.cal-cell.weekend{background:var(--surface2)}
+.cal-day{font-size:13px;font-weight:500;margin-bottom:4px}
+.cal-staff{font-size:10px;display:flex;align-items:center;gap:3px;margin-bottom:2px}
+.cal-dot{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 
-/* Cards */
-.card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; }
-.card-sm { padding: 14px 16px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-
-/* Stat cards */
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
-.stat-val { font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
-.stat-lbl { font-size: 12px; color: var(--text2); }
-
-/* Badges */
-.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-.badge-green { background: var(--green-light); color: var(--green); }
-.badge-amber { background: var(--amber-light); color: var(--amber); }
-.badge-red { background: var(--red-light); color: var(--red); }
-.badge-blue { background: var(--blue-light); color: var(--blue); }
-.badge-teal { background: var(--teal-light); color: var(--teal); }
-.badge-purple { background: var(--purple-light); color: var(--purple); }
-.badge-gray { background: var(--surface2); color: var(--text2); }
-
-/* Buttons */
-.btn { padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
-.btn-primary { background: var(--teal); color: white; }
-.btn-primary:hover { background: #0d6b5e; }
-.btn-secondary { background: var(--surface); border: 1px solid var(--border2); color: var(--text); }
-.btn-secondary:hover { background: var(--surface2); }
-.btn-danger { background: var(--red-light); color: var(--red); border: 1px solid rgba(192,57,43,.15); }
-.btn-danger:hover { background: #fbddda; }
-.btn-success { background: var(--green-light); color: var(--green); border: 1px solid rgba(46,125,50,.15); }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn-lg { padding: 13px 24px; font-size: 15px; border-radius: var(--radius); }
-.btn-block { width: 100%; justify-content: center; }
-
-/* Forms */
-.form-group { margin-bottom: 14px; }
-.form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; display: block; }
-.form-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13.5px; background: var(--surface); color: var(--text); transition: border .15s; }
-.form-input:focus { border-color: var(--teal-mid); }
-.form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6a65' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
-
-/* Tables */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px; border-bottom: 1px solid var(--border); }
-td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--surface2); }
-.staff-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-
-/* Modal */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
-.modal-overlay.open { display: flex; }
-.modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.modal-header { padding: 20px 24px 0; display: flex; justify-content: space-between; align-items: center; }
-.modal-body { padding: 20px 24px 24px; }
-.modal-title { font-size: 17px; font-weight: 600; }
-.modal-close { width: 28px; height: 28px; border-radius: 6px; background: var(--surface2); color: var(--text2); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; border: none; }
-
-/* Page headers */
-.page-header { margin-bottom: 20px; }
-.page-title { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
-.page-sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
-
-/* Tabs */
-.tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 20px; width: fit-content; }
-.tab { padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all .15s; }
-.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-
-/* QR Box */
-.qr-area { background: var(--surface2); border: 2px dashed var(--border2); border-radius: var(--radius); padding: 40px 20px; text-align: center; }
-.qr-icon { font-size: 64px; margin-bottom: 10px; }
-
-/* Progress bar */
-.progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 3px; background: var(--teal-mid); transition: width .3s; }
-
-/* Timeline */
-.timeline-item { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.timeline-item:last-child { border-bottom: none; }
-.tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-.tl-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; min-width: 48px; margin-top: 2px; }
-.tl-text { font-size: 13px; line-height: 1.4; }
-
-/* Rota grid */
-.rota-grid { display: grid; grid-template-columns: 110px repeat(7, 1fr); gap: 2px; }
-.rota-head { font-size: 11px; font-weight: 600; color: var(--text3); text-align: center; padding: 8px 4px; text-transform: uppercase; letter-spacing: .04em; }
-.rota-staff-name { font-size: 12px; font-weight: 500; padding: 6px 8px; display: flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); }
-.rota-cell { border-radius: 6px; padding: 5px 4px; text-align: center; font-size: 11px; font-weight: 500; min-height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity .1s; }
-.rota-cell:hover { opacity: .8; }
-.rota-work { background: var(--teal-light); color: var(--teal); }
-.rota-off { background: var(--surface2); color: var(--text3); }
-.rota-leave { background: var(--amber-light); color: var(--amber); }
-
-/* Notification badge */
-.notif { width: 8px; height: 8px; border-radius: 50%; background: var(--red); display: inline-block; }
-
-/* Mobile-first staff view */
-.mobile-frame { max-width: 390px; margin: 0 auto; }
-
-/* Check-in big buttons */
-.checkin-btn { width: 100%; padding: 18px; border-radius: var(--radius); font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all .15s; margin-bottom: 12px; }
-.checkin-btn:hover { transform: translateY(-1px); }
-.checkin-in { background: var(--teal-light); color: var(--teal); border: 1.5px solid rgba(15,123,108,.2); }
-.checkin-out { background: var(--red-light); color: var(--red); border: 1.5px solid rgba(192,57,43,.2); }
-
-/* Payroll */
-.payroll-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
-.payroll-row:last-child { border-bottom: none; }
-.payroll-total { font-size: 15px; font-weight: 600; padding-top: 12px; border-top: 2px solid var(--border2); margin-top: 4px; display: flex; justify-content: space-between; }
-
-/* Toast */
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 18px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; z-index: 999; display: none; box-shadow: var(--shadow); }
-.toast.show { display: block; animation: slideUp .2s ease; }
-@keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* Divider */
-.divider { height: 1px; background: var(--border); margin: 16px 0; }
-
-/* Flex utils */
-.flex { display: flex; }
-.flex-center { display: flex; align-items: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.gap-8 { gap: 8px; }
-.gap-12 { gap: 12px; }
-.gap-16 { gap: 16px; }
-.gap-20 { gap: 20px; }
-.mt-4 { margin-top: 4px; }
-.mt-8 { margin-top: 8px; }
-.mt-12 { margin-top: 12px; }
-.mt-16 { margin-top: 16px; }
-.mt-20 { margin-top: 20px; }
-.mb-4 { margin-bottom: 4px; }
-.mb-8 { margin-bottom: 8px; }
-.mb-12 { margin-bottom: 12px; }
-.mb-16 { margin-bottom: 16px; }
-.text-sm { font-size: 12px; }
-.text-xs { font-size: 11px; }
-.text-muted { color: var(--text2); }
-.text-right { text-align: right; }
-.font-mono { font-family: 'DM Mono', monospace; }
-.font-600 { font-weight: 600; }
-
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; }
-  .mobile-nav { display: block; }
-  .content { padding: 16px; padding-bottom: 80px; }
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .hide-mobile { display: none !important; }
-  .topbar { padding: 0 16px; }
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .content{padding:16px}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .hide-mobile{display:none!important}
 }
 </style>
 </head>
 <body>
-<div class="app" id="app">
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="logo">
-    <div class="logo-mark">OurShift</div>
-    <div class="logo-sub">Staff Management</div>
-  </div>
-  <div id="sidebarNav"></div>
-  <div class="role-switcher">
-    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Viewing as</div>
-    <button class="role-btn" onclick="openRoleModal()">
-      <div class="role-dot" id="roleDot" style="background:var(--teal)"></div>
-      <span id="roleLabel">Staff</span>
-      <svg style="margin-left:auto;width:14px;height:14px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-    </button>
-  </div>
-</aside>
-
-<!-- Main -->
-<main class="main">
-  <header class="topbar">
-    <div class="flex-center gap-12">
-      <button onclick="toggleSidebar()" style="background:none;padding:4px;border-radius:6px;color:var(--text2)">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <span id="topbarTitle" style="font-weight:600;font-size:15px"></span>
+<!-- AUTH SCREENS -->
+<div id="authScreen">
+  <!-- LOGIN -->
+  <div class="auth-wrap" id="loginScreen">
+    <div class="auth-card">
+      <div class="auth-logo">OurShift</div>
+      <div class="auth-tagline">Staff management for any business</div>
+      <div class="auth-title">Welcome back</div>
+      <div class="auth-sub">Sign in to your account</div>
+      <div class="auth-error" id="loginError"></div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn-brand" onclick="doLogin()">Sign in</button>
+      <div class="auth-switch">New to OurShift? <a onclick="showScreen('registerScreen')">Create an account</a></div>
     </div>
-    <div class="flex-center gap-12">
-      <div id="topbarUser" style="font-size:13px;color:var(--text2)"></div>
-      <div id="topbarAvatar" class="staff-avatar" style="background:var(--teal-light);color:var(--teal)"></div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="auth-wrap" id="registerScreen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">OurShift</div>
+      <div class="auth-tagline">Staff management for any business</div>
+      <div class="auth-title">Create your account</div>
+      <div class="auth-sub">Set up OurShift for your business — takes 2 minutes</div>
+      <div class="auth-error" id="registerError"></div>
+      <div class="auth-success" id="registerSuccess"></div>
+      <div class="form-group">
+        <label class="form-label">Your name</label>
+        <input type="text" class="form-input" id="regName" placeholder="Jane Smith">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Business name</label>
+        <input type="text" class="form-input" id="regOrg" placeholder="e.g. Riverside Dental, The Hair Lounge">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Business type</label>
+        <select class="form-input form-select" id="regType">
+          <option value="dental">Dental practice</option>
+          <option value="salon">Hair / beauty salon</option>
+          <option value="restaurant">Restaurant / café</option>
+          <option value="care">Care home</option>
+          <option value="gym">Gym / fitness</option>
+          <option value="retail">Retail</option>
+          <option value="office">Office / professional</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" class="form-input" id="regEmail" placeholder="you@yourbusiness.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="regPassword" placeholder="At least 8 characters">
+      </div>
+      <button class="btn-brand" onclick="doRegister()">Create account</button>
+      <div class="auth-switch">Already have an account? <a onclick="showScreen('loginScreen')">Sign in</a></div>
     </div>
-  </header>
-  <div class="content" id="pageContent"></div>
-</main>
-
-<!-- Mobile nav -->
-<nav class="mobile-nav" id="mobileNav">
-  <div class="mobile-nav-items" id="mobileNavItems"></div>
-</nav>
-
+  </div>
 </div>
 
-<!-- Modals -->
-<div class="modal-overlay" id="roleModal">
-  <div class="modal" style="max-width:340px">
+<!-- MAIN APP -->
+<div class="app" id="mainApp" style="display:none">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-mark">OurShift</div>
+      <div class="logo-sub" id="sidebarOrgName">Staff Management</div>
+    </div>
+    <div id="sidebarNav" style="padding:8px 0;flex:1;overflow-y:auto"></div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="avatar" id="sidebarAvatar">?</div>
+        <div>
+          <div class="user-name" id="sidebarName">Loading...</div>
+          <div class="user-role" id="sidebarRole">—</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="flex-center gap-12">
+        <button onclick="toggleSidebar()" style="background:none;padding:4px;border-radius:6px;color:var(--text2)">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span id="topbarTitle" style="font-weight:600;font-size:15px"></span>
+      </div>
+      <div class="flex-center gap-8">
+        <div id="topbarOrg" style="font-size:12px;color:var(--text2)"></div>
+        <div id="topbarAvatar" class="avatar"></div>
+      </div>
+    </header>
+    <div class="content" id="pageContent">
+      <div class="loading">Loading...</div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Switch role</div>
-      <button class="modal-close" onclick="closeModal('roleModal')">×</button>
+      <div class="modal-title">Add staff member</div>
+      <button class="modal-close" onclick="closeModal('addStaffModal')">×</button>
     </div>
     <div class="modal-body">
-      <p class="text-sm text-muted mb-16">Choose which view to display.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn btn-secondary btn-block" style="justify-content:flex-start;gap:10px" onclick="setRole('admin')"><div class="role-dot" style="background:#0f7b6c"></div>Admin / Owner</button>
-        <button class="btn btn-secondary btn-block" style="justify-content:flex-start;gap:10px" onclick="setRole('staff')"><div class="role-dot" style="background:#1a5fa8"></div>Staff member</button>
-        <button class="btn btn-secondary btn-block" style="justify-content:flex-start;gap:10px" onclick="setRole('accountant')"><div class="role-dot" style="background:#5b3fa8"></div>Accountant</button>
+      <div class="form-group"><label class="form-label">Full name</label><input type="text" class="form-input" id="staffName" placeholder="e.g. Sarah Chen"></div>
+      <div class="form-group"><label class="form-label">Job role</label><input type="text" class="form-input" id="staffRole" placeholder="e.g. Receptionist, Manager"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Hourly rate (£)</label><input type="number" class="form-input" id="staffRate" placeholder="0.00" step="0.01" min="0"></div>
+        <div class="form-group"><label class="form-label">Contracted hrs/week</label><input type="number" class="form-input" id="staffHours" placeholder="37.5" step="0.5" min="0"></div>
       </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Working days/week</label><select class="form-input form-select" id="staffDays"><option value="5">5 days (Mon–Fri)</option><option value="4">4 days</option><option value="3">3 days</option><option value="6">6 days</option></select></div>
+        <div class="form-group"><label class="form-label">Holiday allowance (days)</label><input type="number" class="form-input" id="staffHoliday" placeholder="25" min="0"></div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="saveStaff()">Add staff member</button>
     </div>
   </div>
 </div>
@@ -293,30 +320,13 @@ tr:hover td { background: var(--surface2); }
       <button class="modal-close" onclick="closeModal('leaveModal')">×</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Leave type</label>
-        <select class="form-input form-select" id="leaveType">
-          <option>Annual leave</option>
-          <option>Sick day</option>
-          <option>Compassionate leave</option>
-          <option>Unpaid leave</option>
-        </select>
-      </div>
+      <div class="form-group"><label class="form-label">Leave type</label><select class="form-input form-select" id="leaveType"><option>Annual leave</option><option>Sick day</option><option>Compassionate leave</option><option>Unpaid leave</option></select></div>
       <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Start date</label>
-          <input type="date" class="form-input" id="leaveStart">
-        </div>
-        <div class="form-group">
-          <label class="form-label">End date</label>
-          <input type="date" class="form-input" id="leaveEnd">
-        </div>
+        <div class="form-group"><label class="form-label">Start date</label><input type="date" class="form-input" id="leaveStart"></div>
+        <div class="form-group"><label class="form-label">End date</label><input type="date" class="form-input" id="leaveEnd"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Notes (optional)</label>
-        <textarea class="form-input" id="leaveNotes" rows="3" placeholder="Any additional details…"></textarea>
-      </div>
-      <button class="btn btn-primary btn-block btn-lg" onclick="submitLeave()">Submit request</button>
+      <div class="form-group"><label class="form-label">Notes (optional)</label><textarea class="form-input" id="leaveNotes" rows="3" placeholder="Any details..."></textarea></div>
+      <button class="btn btn-primary btn-block" onclick="submitLeave()">Submit request</button>
     </div>
   </div>
 </div>
@@ -324,525 +334,331 @@ tr:hover td { background: var(--surface2); }
 <div class="modal-overlay" id="bonusModal">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <div class="modal-title" id="bonusModalTitle">Add bonus / deduction</div>
+      <div class="modal-title">Add bonus / deduction</div>
       <button class="modal-close" onclick="closeModal('bonusModal')">×</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Staff member</label>
-        <select class="form-input form-select" id="bonusStaff"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Type</label>
-        <select class="form-input form-select" id="bonusType">
-          <option value="bonus">Bonus</option>
-          <option value="deduction">Deduction</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Amount (£)</label>
-        <input type="number" class="form-input" id="bonusAmount" placeholder="0.00" min="0" step="0.01">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Reason</label>
-        <input type="text" class="form-input" id="bonusReason" placeholder="e.g. Performance bonus">
-      </div>
-      <button class="btn btn-primary btn-block btn-lg" onclick="addBonusDeduction()">Add</button>
+      <div class="form-group"><label class="form-label">Staff member</label><select class="form-input form-select" id="bonusStaffSel"></select></div>
+      <div class="form-group"><label class="form-label">Type</label><select class="form-input form-select" id="bonusType"><option value="bonus">Bonus</option><option value="deduction">Deduction</option></select></div>
+      <div class="form-group"><label class="form-label">Amount (£)</label><input type="number" class="form-input" id="bonusAmount" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Reason</label><input type="text" class="form-input" id="bonusReason" placeholder="e.g. Performance bonus"></div>
+      <button class="btn btn-primary btn-block" onclick="saveBonus()">Add</button>
     </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="checkinModal">
-  <div class="modal" style="max-width:360px">
-    <div class="modal-header">
-      <div class="modal-title" id="checkinModalTitle">Check in</div>
-      <button class="modal-close" onclick="closeModal('checkinModal')">×</button>
-    </div>
-    <div class="modal-body" id="checkinModalBody"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── DATA ──────────────────────────────────────────────────────────────────────
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://rgekvctefndgxuwqfwlb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnZWt2Y3RlZm5kZ3h1d3Fmd2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTM4NDUsImV4cCI6MjA5NDkyOTg0NX0.41wu5uT8Jo8hgdXDfzlDS0JUbaFF_JiKJ8ntWaxCRH4';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const STAFF = [
-  {id:1,  name:'Tasneem',   initials:'TA', role:'Dental Nurse',     rate:18.50, contract:37.5, workDays:5, color:'#4f46e5', colorLight:'#eef2ff', holidayAllowance:25, holidayUsed:8},
-  {id:2,  name:'Vaibhavi',  initials:'VA', role:'Dental Nurse',     rate:18.00, contract:37.5, workDays:5, color:'#0891b2', colorLight:'#ecfeff', holidayAllowance:25, holidayUsed:6},
-  {id:3,  name:'Imran',     initials:'IM', role:'Receptionist',     rate:14.00, contract:37.5, workDays:5, color:'#7c3aed', colorLight:'#f5f3ff', holidayAllowance:25, holidayUsed:5},
-  {id:4,  name:'Janice',    initials:'JA', role:'Hygienist',        rate:28.00, contract:30,   workDays:4, color:'#b45309', colorLight:'#fffbeb', holidayAllowance:22, holidayUsed:10},
-  {id:5,  name:'Kaban',     initials:'KA', role:'Dentist',          rate:45.00, contract:37.5, workDays:5, color:'#059669', colorLight:'#ecfdf5', holidayAllowance:28, holidayUsed:7},
-  {id:6,  name:'Safiyyah',  initials:'SA', role:'Dental Nurse',     rate:17.50, contract:22.5, workDays:3, color:'#dc2626', colorLight:'#fef2f2', holidayAllowance:18, holidayUsed:3},
-  {id:7,  name:'Bably',     initials:'BA', role:'Receptionist',     rate:13.50, contract:37.5, workDays:5, color:'#9333ea', colorLight:'#faf5ff', holidayAllowance:25, holidayUsed:12},
-  {id:8,  name:'Ashwin',    initials:'AS', role:'Practice Manager', rate:25.00, contract:37.5, workDays:5, color:'#0284c7', colorLight:'#f0f9ff', holidayAllowance:25, holidayUsed:9},
-  {id:9,  name:'Leticia',   initials:'LE', role:'Dental Nurse',     rate:19.00, contract:30,   workDays:4, color:'#c2410c', colorLight:'#fff7ed', holidayAllowance:22, holidayUsed:4},
-  {id:10, name:'Farah',     initials:'FA', role:'Hygienist',        rate:27.00, contract:22.5, workDays:3, color:'#16a34a', colorLight:'#f0fdf4', holidayAllowance:18, holidayUsed:2},
-  {id:11, name:'Clare',     initials:'CL', role:'Dentist',          rate:46.00, contract:37.5, workDays:5, color:'#be185d', colorLight:'#fdf2f8', holidayAllowance:28, holidayUsed:6},
-  {id:12, name:'Fatima',    initials:'FT', role:'Receptionist',     rate:14.00, contract:22.5, workDays:3, color:'#92400e', colorLight:'#fffbeb', holidayAllowance:18, holidayUsed:1},
-];
-
-const TODAY = new Date();
-const fmt = d => d.toISOString().split('T')[0];
-const todayStr = fmt(TODAY);
-
-function genTimesheets() {
-  const ts = {};
-  STAFF.forEach(s => {
-    ts[s.id] = [];
-    for (let w = 0; w < 3; w++) {
-      for (let d = 0; d < 7; d++) {
-        const date = new Date(TODAY);
-        date.setDate(date.getDate() - (w * 7) - d);
-        const dow = date.getDay();
-        const isWorkDay = s.workDays === 5 ? (dow >= 1 && dow <= 5) :
-                          s.workDays === 4 ? (dow >= 1 && dow <= 4) :
-                          (dow >= 1 && dow <= 3);
-        if (!isWorkDay) continue;
-        const inH = 8 + (Math.random() < 0.2 ? Math.floor(Math.random() * 2) : 0);
-        const inM = Math.floor(Math.random() * 10);
-        const hours = s.contract / s.workDays;
-        const outH = inH + Math.floor(hours);
-        const outM = Math.floor((hours % 1) * 60) + inM;
-        const status = w === 0 && d === 0 ? 'pending' : (w === 0 ? 'pending' : 'approved');
-        const dateStr = fmt(date);
-        if (dateStr > todayStr) continue;
-        ts[s.id].push({
-          date: dateStr,
-          checkIn: `${String(inH).padStart(2,'0')}:${String(inM).padStart(2,'0')}`,
-          checkOut: `${String(outH % 24).padStart(2,'0')}:${String(outM % 60).padStart(2,'0')}`,
-          hours: parseFloat((hours + (Math.random() - 0.5) * 0.3).toFixed(2)),
-          status
-        });
-      }
-    }
-    ts[s.id].sort((a,b) => b.date.localeCompare(a.date));
-  });
-  return ts;
-}
-
-function genLeave() {
-  const leave = {};
-  STAFF.forEach(s => {
-    leave[s.id] = [
-      { id: Date.now() + s.id*100, type:'Annual leave', start: '2026-06-24', end: '2026-06-26', days:3, status:'approved', notes:'' },
-      { id: Date.now() + s.id*200, type:'Annual leave', start: '2026-04-14', end: '2026-04-17', days:4, status:'approved', notes:'' },
-    ];
-    if (s.id % 3 === 0) leave[s.id].push({ id: Date.now() + s.id*300, type:'Annual leave', start:'2026-07-01', end:'2026-07-05', days:5, status:'pending', notes:'Summer holiday' });
-    if (s.id % 4 === 0) leave[s.id].push({ id: Date.now() + s.id*400, type:'Sick day', start:'2026-03-03', end:'2026-03-03', days:1, status:'approved', notes:'' });
-  });
-  return leave;
-}
-
+// ── STATE ─────────────────────────────────────────────────────────────────────
 let STATE = {
-  role: 'staff',
-  currentStaffId: 1,
-  page: 'checkin',
-  timesheets: genTimesheets(),
-  leave: genLeave(),
-  checkins: {},
-  bonuses: {},
-  rota: {},
+  user: null,
+  admin: null,
+  org: null,
+  staff: [],
+  page: 'dashboard',
+  calMonth: new Date().getMonth(),
+  calYear: new Date().getFullYear()
 };
 
-// Load from storage
-try {
-  const saved = localStorage.getItem('dentaflow_state');
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    STATE = { ...STATE, ...parsed };
-  }
-} catch(e) {}
+const TODAY = new Date();
+const todayStr = fmt(TODAY);
 
-function save() {
-  try { localStorage.setItem('dentaflow_state', JSON.stringify(STATE)); } catch(e) {}
+function fmt(d){ return d.toISOString().split('T')[0]; }
+function formatDate(d){ return new Date(d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+function formatDateShort(s){ return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}); }
+function getInitials(name){ return name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2); }
+
+const COLORS = [
+  {c:'#e8440a',l:'#fff1ec'},{c:'#0891b2',l:'#ecfeff'},{c:'#7c3aed',l:'#f5f3ff'},
+  {c:'#059669',l:'#ecfdf5'},{c:'#dc2626',l:'#fef2f2'},{c:'#9333ea',l:'#faf5ff'},
+  {c:'#0284c7',l:'#f0f9ff'},{c:'#c2410c',l:'#fff7ed'},{c:'#16a34a',l:'#f0fdf4'},
+  {c:'#be185d',l:'#fdf2f8'},{c:'#1d4ed8',l:'#eff6ff'},{c:'#92400e',l:'#fffbeb'}
+];
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  ['loginScreen','registerScreen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
+  });
 }
 
-// ── NAVIGATION ────────────────────────────────────────────────────────────────
-
-const NAV_STAFF = [
-  { id:'home',         label:'Home',       icon:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10' },
-  { id:'checkin',      label:'Check-in',   icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0' },
-  { id:'timesheet',    label:'Hours',      icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M12 6v6l4 2' },
-  { id:'leave',        label:'Leave',      icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
-  { id:'team_calendar',label:'Team rota',  icon:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z' },
-];
-
-const NAV_ADMIN = [
-  { id:'dashboard',    label:'Dashboard',  icon:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z' },
-  { id:'attendance',   label:'Attendance', icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0' },
-  { id:'timesheets',   label:'Timesheets', icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M12 6v6l4 2' },
-  { id:'leave_admin',  label:'Leave',      icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
-  { id:'payroll',      label:'Payroll',    icon:'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
-  { id:'team_calendar',label:'Team rota',  icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
-  { id:'rota_admin',   label:'Edit rota',  icon:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z' },
-];
-
-const NAV_ACCOUNTANT = [
-  { id:'payroll',    label:'Payroll',    icon:'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
-  { id:'reports',    label:'Reports',    icon:'M18 20V10 M12 20V4 M6 20v-6' },
-];
-
-function getNav() {
-  if (STATE.role === 'admin') return NAV_ADMIN;
-  if (STATE.role === 'accountant') return NAV_ACCOUNTANT;
-  return NAV_STAFF;
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  err.classList.remove('show');
+  if (!email || !pw) { err.textContent = 'Please enter your email and password.'; err.classList.add('show'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { err.textContent = error.message; err.classList.add('show'); return; }
+  await loadUserAndStart(data.user);
 }
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const org = document.getElementById('regOrg').value.trim();
+  const type = document.getElementById('regType').value;
+  const email = document.getElementById('regEmail').value.trim();
+  const pw = document.getElementById('regPassword').value;
+  const err = document.getElementById('registerError');
+  const suc = document.getElementById('registerSuccess');
+  err.classList.remove('show'); suc.classList.remove('show');
+  if (!name || !org || !email || !pw) { err.textContent = 'Please fill in all fields.'; err.classList.add('show'); return; }
+  if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.classList.add('show'); return; }
+
+  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  if (error) { err.textContent = error.message; err.classList.add('show'); return; }
+
+  // Create organisation
+  const { data: orgData, error: orgErr } = await sb.from('organisations').insert({ name: org, business_type: type }).select().single();
+  if (orgErr) { err.textContent = 'Error creating organisation: ' + orgErr.message; err.classList.add('show'); return; }
+
+  // Create admin record
+  await sb.from('admins').insert({ org_id: orgData.id, email, name, role: 'admin' });
+
+  // Create subscription (14-day trial)
+  await sb.from('subscriptions').insert({ org_id: orgData.id, plan: 'starter', status: 'trial' });
+
+  suc.textContent = 'Account created! Please check your email to verify, then sign in.';
+  suc.classList.add('show');
+}
+
+async function loadUserAndStart(user) {
+  STATE.user = user;
+  // Load admin record
+  const { data: adminData } = await sb.from('admins').select('*, organisations(*)').eq('email', user.email).single();
+  if (!adminData) { showToast('Account not found. Please register.'); doLogout(); return; }
+  STATE.admin = adminData;
+  STATE.org = adminData.organisations;
+  // Load staff
+  await loadStaff();
+  showApp();
+}
+
+async function loadStaff() {
+  if (!STATE.org) return;
+  const { data } = await sb.from('staff').select('*').eq('org_id', STATE.org.id).order('name');
+  STATE.staff = data || [];
+}
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  // Set sidebar info
+  document.getElementById('sidebarOrgName').textContent = STATE.org?.name || 'OurShift';
+  document.getElementById('sidebarName').textContent = STATE.admin?.name || '';
+  document.getElementById('sidebarRole').textContent = STATE.admin?.role || 'admin';
+  const initials = getInitials(STATE.admin?.name || 'U');
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('topbarAvatar').textContent = initials;
+  document.getElementById('topbarOrg').textContent = STATE.org?.name || '';
+  renderNav();
+  navigate('dashboard');
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  STATE = { user:null, admin:null, org:null, staff:[], page:'dashboard', calMonth:new Date().getMonth(), calYear:new Date().getFullYear() };
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  showScreen('loginScreen');
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+const NAV = [
+  { id:'dashboard',     label:'Dashboard',    icon:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z' },
+  { id:'team_calendar', label:'Team rota',    icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
+  { id:'attendance',    label:'Attendance',   icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0' },
+  { id:'timesheets',    label:'Timesheets',   icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M12 6v6l4 2' },
+  { id:'leave',         label:'Leave',        icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
+  { id:'payroll',       label:'Payroll',      icon:'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
+  { id:'staff',         label:'Staff',        icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0' },
+];
+
+const PAGE_TITLES = { dashboard:'Dashboard', team_calendar:'Team rota', attendance:'Attendance', timesheets:'Timesheets', leave:'Leave requests', payroll:'Payroll', staff:'Staff' };
 
 function iconSvg(path, size=16) {
   return `<svg width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="${path}"/></svg>`;
 }
 
 function renderNav() {
-  const nav = getNav();
-  const sidebar = nav.map(n => `
-    <div class="nav-item ${STATE.page === n.id ? 'active' : ''}" onclick="navigate('${n.id}')">
+  const nav = NAV.map(n => `
+    <div class="nav-item ${STATE.page===n.id?'active':''}" onclick="navigate('${n.id}')">
       ${iconSvg(n.icon)} ${n.label}
-      ${n.id === 'leave_admin' && getPendingLeaveCount() > 0 ? `<span class="nav-badge">${getPendingLeaveCount()}</span>` : ''}
-      ${n.id === 'timesheets' && getPendingTimesheetCount() > 0 ? `<span class="nav-badge">${getPendingTimesheetCount()}</span>` : ''}
-    </div>
-  `).join('');
-  
-  document.getElementById('sidebarNav').innerHTML = `<div style="padding:8px 0">${nav.map(n => `<div class="nav-section" style="display:none"></div>`).join('')}</div><div style="padding:8px 0">${sidebar}</div>`;
-  
-  const mobile = nav.slice(0, 5).map(n => `
-    <div class="mobile-nav-item ${STATE.page === n.id ? 'active' : ''}" onclick="navigate('${n.id}')">
-      ${iconSvg(n.icon, 20)} <span>${n.label}</span>
-    </div>
-  `).join('');
-  document.getElementById('mobileNavItems').innerHTML = mobile;
-
-  // Topbar
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  const roleColors = { admin:'#0f7b6c', staff:'#1a5fa8', accountant:'#5b3fa8' };
-  const roleLabels = { admin:'Admin / Owner', staff: staff ? staff.name : 'Staff', accountant:'Accountant' };
-  document.getElementById('roleDot').style.background = roleColors[STATE.role];
-  document.getElementById('roleLabel').textContent = STATE.role === 'staff' ? (staff ? staff.name.split(' ')[0] : 'Staff') : STATE.role.charAt(0).toUpperCase() + STATE.role.slice(1);
-  document.getElementById('topbarUser').textContent = roleLabels[STATE.role];
-  if (staff) {
-    document.getElementById('topbarAvatar').textContent = staff.initials;
-    document.getElementById('topbarAvatar').style.background = staff.colorLight;
-    document.getElementById('topbarAvatar').style.color = staff.color;
-  }
-
-  const pageTitle = { home:'Home', checkin:'Check-in', timesheet:'My hours', leave:'Leave & holidays', rota:'My rota', dashboard:'Dashboard', attendance:'Attendance', timesheets:'Timesheets', leave_admin:'Leave requests', payroll:'Payroll', rota_admin:'Edit rota', reports:'Reports', team_calendar:'Team rota' };
-  document.getElementById('topbarTitle').textContent = pageTitle[STATE.page] || '';
+    </div>`).join('');
+  document.getElementById('sidebarNav').innerHTML = nav;
 }
 
 function navigate(page) {
   STATE.page = page;
-  save();
+  document.getElementById('topbarTitle').textContent = PAGE_TITLES[page] || '';
   renderNav();
   renderPage();
   window.scrollTo(0,0);
 }
 
-function getPendingLeaveCount() {
-  let n = 0;
-  Object.values(STATE.leave).forEach(arr => arr.forEach(l => { if (l.status === 'pending') n++; }));
-  return n;
-}
-
-function getPendingTimesheetCount() {
-  let n = 0;
-  Object.values(STATE.timesheets).forEach(arr => arr.forEach(t => { if (t.status === 'pending') n++; }));
-  return Math.min(n, 99);
-}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
 // ── PAGES ─────────────────────────────────────────────────────────────────────
-
 function renderPage() {
   const el = document.getElementById('pageContent');
-  const pages = {
-    home: pageHome, checkin: pageCheckin, timesheet: pageTimesheet,
-    leave: pageLeave, rota: pageRota, dashboard: pageDashboard,
-    attendance: pageAttendance, timesheets: pageTimesheets,
-    leave_admin: pageLeaveAdmin, payroll: pagePayroll,
-    rota_admin: pageRotaAdmin, reports: pageReports,
-    team_calendar: pageTeamCalendar
-  };
+  const pages = { dashboard:pageDashboard, team_calendar:pageTeamCalendar, attendance:pageAttendance, timesheets:pageTimesheets, leave:pageLeave, payroll:pagePayroll, staff:pageStaff };
   const fn = pages[STATE.page];
-  el.innerHTML = fn ? fn() : '<p>Page not found</p>';
+  if (fn) fn(el); else el.innerHTML = '<p>Page not found</p>';
 }
 
-// ── STAFF PAGES ───────────────────────────────────────────────────────────────
-
-function pageHome() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  if (!staff) return '';
-  const thisWeekHours = getStaffWeekHours(staff.id);
-  const checkedIn = STATE.checkins[staff.id] && !STATE.checkins[staff.id].out;
-  const checkInTime = STATE.checkins[staff.id] ? STATE.checkins[staff.id].in : null;
-  const remaining = staff.holidayAllowance - staff.holidayUsed;
-
-  return `<div class="mobile-frame">
-    <div class="flex-center gap-12 mb-20">
-      <div class="staff-avatar" style="width:44px;height:44px;font-size:15px;background:${staff.colorLight};color:${staff.color}">${staff.initials}</div>
-      <div>
-        <div style="font-size:18px;font-weight:600">Good ${getGreeting()}, ${staff.name.split(' ')[0]}</div>
-        <div class="text-sm text-muted">${formatDate(TODAY)}</div>
-      </div>
+function pageDashboard(el) {
+  const s = STATE.staff;
+  el.innerHTML = `
+    <div class="page-header flex-between">
+      <div><div class="page-title">Dashboard</div><div class="page-sub">${formatDate(TODAY)} · ${STATE.org?.name}</div></div>
     </div>
-    <div class="grid-2 mb-12">
-      <div class="stat"><div class="stat-val">${thisWeekHours.toFixed(1)}h</div><div class="stat-lbl">This week</div></div>
-      <div class="stat"><div class="stat-val">${remaining}</div><div class="stat-lbl">Holiday days left</div></div>
+    <div class="grid-4 mb-16">
+      <div class="stat"><div class="stat-val" style="color:var(--brand)">${s.length}</div><div class="stat-lbl">Total staff</div></div>
+      <div class="stat"><div class="stat-val">${s.filter(x=>x.work_days>=5).length}</div><div class="stat-lbl">Full time</div></div>
+      <div class="stat"><div class="stat-val">${s.filter(x=>x.work_days<5).length}</div><div class="stat-lbl">Part time</div></div>
+      <div class="stat"><div class="stat-val">${STATE.org?.business_type||'—'}</div><div class="stat-lbl">Business type</div></div>
     </div>
-    <div class="grid-2 mb-20">
-      <div class="stat"><div class="stat-val" style="font-size:16px;color:${checkedIn ? 'var(--teal)' : 'var(--text2)'}">${checkedIn ? 'Checked in' : 'Not checked in'}</div><div class="stat-lbl">${checkedIn ? 'Since ' + checkInTime : 'Tap Check-in tab'}</div></div>
-      <div class="stat"><div class="stat-val" style="font-size:16px">${staff.workDays === 5 ? 'Mon–Fri' : staff.workDays === 4 ? 'Mon–Thu' : 'Mon–Wed'}</div><div class="stat-lbl">Working days</div></div>
-    </div>
-    <div class="card">
-      <div class="flex-between mb-12">
-        <div style="font-weight:600;font-size:15px">Notifications</div>
-        <span class="badge badge-red">3</span>
-      </div>
-      <div class="timeline-item"><div class="tl-dot" style="background:var(--teal)"></div><div><div class="tl-text">Your holiday request (24–26 Jun) was approved</div><div class="text-xs text-muted mt-4">2 hours ago</div></div></div>
-      <div class="timeline-item"><div class="tl-dot" style="background:var(--blue)"></div><div><div class="tl-text">Next week's rota has been published</div><div class="text-xs text-muted mt-4">Yesterday</div></div></div>
-      <div class="timeline-item"><div class="tl-dot" style="background:var(--amber)"></div><div><div class="tl-text">Timesheet for w/e 16 May is pending approval</div><div class="text-xs text-muted mt-4">2 days ago</div></div></div>
-    </div>
-  </div>`;
-}
-
-function pageCheckin() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  if (!staff) return '';
-  const checkin = STATE.checkins[staff.id];
-  const isIn = checkin && !checkin.out;
-  const nowTime = `${String(TODAY.getHours()).padStart(2,'0')}:${String(TODAY.getMinutes()).padStart(2,'0')}`;
-
-  return `<div class="mobile-frame">
-    <div class="mb-20">
-      <div class="page-title mb-4">Check in / out</div>
-      <div class="text-sm text-muted">Scan the clinic QR code or tap the button below</div>
-    </div>
-    <div class="qr-area mb-16">
-      <div style="font-size:56px;margin-bottom:8px">⬛</div>
-      <div style="font-size:13px;color:var(--text2)">Point camera at clinic QR code</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">or use the buttons below</div>
-    </div>
-    <button class="checkin-btn checkin-in ${isIn ? 'disabled' : ''}" onclick="${isIn ? '' : 'doCheckIn()'}" style="${isIn ? 'opacity:.4;cursor:not-allowed' : ''}">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3"/></svg>
-      Start shift
-    </button>
-    <button class="checkin-btn checkin-out ${!isIn ? 'disabled' : ''}" onclick="${!isIn ? '' : 'doCheckOut()'}" style="${!isIn ? 'opacity:.4;cursor:not-allowed' : ''}">
-      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
-      End shift
-    </button>
-    <div class="divider"></div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px">Today's record</div>
-    <div class="card card-sm mb-8 flex-between">
-      <div><div style="font-weight:500">Check-in</div><div class="text-xs text-muted">${formatDate(TODAY)}</div></div>
-      <div class="text-right">
-        <div style="font-weight:600;font-family:'DM Mono',monospace">${checkin ? checkin.in : '—'}</div>
-        ${checkin ? '<span class="badge badge-teal">Recorded</span>' : '<span class="badge badge-gray">Pending</span>'}
-      </div>
-    </div>
-    <div class="card card-sm mb-12 flex-between">
-      <div><div style="font-weight:500">Check-out</div><div class="text-xs text-muted">${formatDate(TODAY)}</div></div>
-      <div class="text-right">
-        <div style="font-weight:600;font-family:'DM Mono',monospace">${checkin && checkin.out ? checkin.out : '—'}</div>
-        ${checkin && checkin.out ? '<span class="badge badge-teal">Recorded</span>' : '<span class="badge badge-gray">Pending</span>'}
-      </div>
-    </div>
-    ${checkin && checkin.out ? `<div class="card card-sm flex-between" style="background:var(--teal-light)"><div style="font-weight:500;color:var(--teal)">Total today</div><div style="font-weight:700;font-family:'DM Mono',monospace;color:var(--teal)">${calcHours(checkin.in, checkin.out)}</div></div>` : ''}
-    <p class="text-xs text-muted mt-12">If you forget to check out, your manager will be notified and can correct it manually.</p>
-  </div>`;
-}
-
-function pageTimesheet() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  if (!staff) return '';
-  const entries = (STATE.timesheets[staff.id] || []).slice(0, 14);
-  const weekHours = getStaffWeekHours(staff.id);
-  const monthHours = getStaffMonthHours(staff.id);
-
-  return `<div class="mobile-frame">
-    <div class="page-header">
-      <div class="page-title">My hours</div>
-      <div class="page-sub">${staff.name} · £${staff.rate.toFixed(2)}/hr</div>
-    </div>
-    <div class="grid-2 mb-16">
-      <div class="stat"><div class="stat-val">${weekHours.toFixed(1)}h</div><div class="stat-lbl">This week</div></div>
-      <div class="stat"><div class="stat-val">${monthHours.toFixed(1)}h</div><div class="stat-lbl">This month</div></div>
-    </div>
-    <div class="grid-2 mb-20">
-      <div class="stat"><div class="stat-val">${staff.contract}h</div><div class="stat-lbl">Contracted/week</div></div>
-      <div class="stat"><div class="stat-val">£${(monthHours * staff.rate).toFixed(0)}</div><div class="stat-lbl">Est. this month</div></div>
-    </div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px">Recent shifts</div>
-    ${entries.map(e => `
-      <div class="card card-sm mb-8 flex-between">
-        <div>
-          <div style="font-weight:500">${formatDateShort(e.date)}</div>
-          <div class="text-xs text-muted font-mono">${e.checkIn} – ${e.checkOut}</div>
-        </div>
-        <div class="text-right">
-          <div style="font-weight:600;font-family:'DM Mono',monospace">${e.hours.toFixed(1)}h</div>
-          <span class="badge badge-${e.status === 'approved' ? 'green' : 'amber'}">${e.status}</span>
-        </div>
-      </div>`).join('')}
-  </div>`;
-}
-
-function pageLeave() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  if (!staff) return '';
-  const leaveList = STATE.leave[staff.id] || [];
-  const used = staff.holidayUsed;
-  const total = staff.holidayAllowance;
-  const remaining = total - used;
-  const pct = Math.round((used / total) * 100);
-
-  return `<div class="mobile-frame">
-    <div class="page-header">
-      <div class="page-title">Leave & holidays</div>
-      <div class="page-sub">Financial year 2025–26</div>
-    </div>
-    <div class="card mb-16">
-      <div class="flex-between mb-8">
-        <div style="font-weight:600">Holiday allowance</div>
-        <div class="text-sm text-muted">${used} of ${total} days used</div>
-      </div>
-      <div class="progress-bar mb-8"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="flex-between text-xs text-muted">
-        <span>0</span>
-        <span style="color:var(--teal);font-weight:600">${remaining} days remaining</span>
-        <span>${total}</span>
-      </div>
-    </div>
-    <button class="btn btn-primary btn-block btn-lg mb-20" onclick="openModal('leaveModal')">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Request leave
-    </button>
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px">Leave history</div>
-    ${leaveList.length === 0 ? '<p class="text-sm text-muted">No leave requests yet.</p>' : leaveList.map(l => `
-      <div class="card card-sm mb-8">
-        <div class="flex-between">
-          <div>
-            <div style="font-weight:500">${l.type}</div>
-            <div class="text-xs text-muted">${l.start} – ${l.end} · ${l.days} day${l.days > 1 ? 's' : ''}</div>
-            ${l.notes ? `<div class="text-xs text-muted mt-4">${l.notes}</div>` : ''}
-          </div>
-          <span class="badge badge-${l.status === 'approved' ? 'green' : l.status === 'rejected' ? 'red' : 'amber'}">${l.status}</span>
-        </div>
-      </div>`).join('')}
-  </div>`;
-}
-
-function pageRota() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  if (!staff) return '';
-  const days = getWeekDays(TODAY);
-  const schedule = getStaffSchedule(staff);
-
-  return `<div class="mobile-frame">
-    <div class="page-header">
-      <div class="page-title">My rota</div>
-      <div class="page-sub">Week of ${formatDateShort(days[0].str)} – ${formatDateShort(days[6].str)}</div>
-    </div>
-    <div class="grid-2 mb-16">
-      <div class="stat"><div class="stat-val">${staff.workDays}</div><div class="stat-lbl">Shifts this week</div></div>
-      <div class="stat"><div class="stat-val">${staff.contract}h</div><div class="stat-lbl">Scheduled hours</div></div>
-    </div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px">This week's schedule</div>
-    ${days.map(d => {
-      const isWork = schedule.includes(d.dow);
-      const isToday = d.str === todayStr;
-      return `<div class="card card-sm mb-8 flex-between" style="${isToday ? 'border-color:var(--teal-mid);background:var(--teal-light)' : ''}">
-        <div>
-          <div style="font-weight:${isToday ? 600 : 500};color:${isToday ? 'var(--teal)' : 'var(--text)'}">${d.label}</div>
-          <div class="text-xs font-mono" style="color:${isWork ? 'var(--text2)' : 'var(--text3)'}">${isWork ? '08:00 – 17:00' : 'Day off'}</div>
-        </div>
-        <div class="flex-center gap-8">
-          ${isToday ? '<span class="badge badge-teal">Today</span>' : ''}
-          <span class="badge badge-${isWork ? 'blue' : 'gray'}">${isWork ? 'Scheduled' : 'Off'}</span>
-        </div>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-// ── ADMIN PAGES ───────────────────────────────────────────────────────────────
-
-function pageDashboard() {
-  const totalStaff = STAFF.length;
-  const checkedIn = Object.values(STATE.checkins).filter(c => c && !c.out).length;
-  const pendingLeave = getPendingLeaveCount();
-  const pendingTS = getPendingTimesheetCount();
-
-  return `
-    <div class="page-header">
-      <div class="page-title">Dashboard</div>
-      <div class="page-sub">${formatDate(TODAY)} · Smile Dental Practice · OurShift</div>
-    </div>
-    <div class="grid-4 mb-20">
-      <div class="stat"><div class="stat-val" style="color:var(--teal)">${checkedIn}</div><div class="stat-lbl">Checked in today</div></div>
-      <div class="stat"><div class="stat-val">${totalStaff}</div><div class="stat-lbl">Total staff</div></div>
-      <div class="stat"><div class="stat-val" style="color:${pendingLeave > 0 ? 'var(--amber)' : 'var(--text)'}">${pendingLeave}</div><div class="stat-lbl">Pending leave</div></div>
-      <div class="stat"><div class="stat-val" style="color:${pendingTS > 0 ? 'var(--amber)' : 'var(--text)'}">${pendingTS}</div><div class="stat-lbl">Pending timesheets</div></div>
-    </div>
-    <div class="grid-2 gap-20">
+    <div class="grid-2 gap-16">
       <div class="card">
-        <div style="font-weight:600;margin-bottom:14px">Staff status today</div>
-        ${STAFF.map(s => {
-          const c = STATE.checkins[s.id];
-          const isIn = c && !c.out;
-          return `<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)">
-            <div class="flex-center gap-8">
-              <div class="staff-avatar" style="background:${s.colorLight};color:${s.color}">${s.initials}</div>
-              <div><div style="font-weight:500;font-size:13px">${s.name}</div><div class="text-xs text-muted">${s.role}</div></div>
-            </div>
-            <span class="badge badge-${isIn ? 'teal' : 'gray'}">${isIn ? 'In since ' + c.in : 'Not in'}</span>
-          </div>`;
-        }).join('')}
+        <div class="flex-between mb-12"><div style="font-weight:600">Quick actions</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-secondary btn-block" onclick="openModal('addStaffModal')">+ Add staff member</button>
+          <button class="btn btn-secondary btn-block" onclick="navigate('team_calendar')">View team rota →</button>
+          <button class="btn btn-secondary btn-block" onclick="navigate('leave')">Review leave requests →</button>
+          <button class="btn btn-secondary btn-block" onclick="navigate('payroll')">Generate payroll →</button>
+          <button class="btn btn-secondary btn-block" onclick="openBonusModal()">Add bonus / deduction →</button>
+        </div>
       </div>
-      <div>
-        <div class="card mb-12">
-          <div style="font-weight:600;margin-bottom:14px">Quick actions</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn btn-secondary btn-block" onclick="navigate('timesheets')">Review pending timesheets <span class="nav-badge" style="background:var(--amber);margin-left:auto">${pendingTS}</span></button>
-            <button class="btn btn-secondary btn-block" onclick="navigate('leave_admin')">Review leave requests <span class="nav-badge" style="margin-left:auto">${pendingLeave}</span></button>
-            <button class="btn btn-secondary btn-block" onclick="navigate('payroll')">Generate payroll →</button>
-            <button class="btn btn-secondary btn-block" onclick="openBonusModal()">Add bonus / deduction →</button>
-          </div>
-        </div>
-        <div class="card">
-          <div style="font-weight:600;margin-bottom:14px">This week at a glance</div>
-          ${STAFF.slice(0,5).map(s => {
-            const h = getStaffWeekHours(s.id);
-            const pct = Math.min(100, (h / s.contract) * 100);
-            return `<div style="margin-bottom:12px">
-              <div class="flex-between mb-4"><span class="text-sm font-600">${s.name.split(' ')[0]}</span><span class="text-xs text-muted font-mono">${h.toFixed(1)}/${s.contract}h</span></div>
-              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${s.color}"></div></div>
-            </div>`;
-          }).join('')}
-        </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:14px">Your staff (${s.length})</div>
+        ${s.length === 0 ? `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No staff yet</div><div class="empty-sub">Add your first staff member to get started</div></div>` :
+        s.slice(0,8).map(x=>`
+          <div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div class="flex-center gap-8">
+              <div class="avatar" style="background:${x.color_light};color:${x.color}">${getInitials(x.name)}</div>
+              <div><div style="font-weight:500;font-size:13px">${x.name}</div><div class="text-xs text-muted">${x.role||'—'}</div></div>
+            </div>
+            <span class="badge badge-gray">${x.work_days}d/wk</span>
+          </div>`).join('')}
+        ${s.length > 8 ? `<div class="text-sm text-muted" style="padding-top:10px">+${s.length-8} more — <a onclick="navigate('staff')" style="color:var(--brand);cursor:pointer">view all</a></div>` : ''}
       </div>
     </div>`;
 }
 
-function pageAttendance() {
-  return `
+function pageStaff(el) {
+  el.innerHTML = `
     <div class="page-header flex-between">
-      <div><div class="page-title">Attendance</div><div class="page-sub">Today · ${formatDate(TODAY)}</div></div>
-      <button class="btn btn-secondary btn-sm" onclick="doAdminCheckin()">Manual check-in →</button>
+      <div><div class="page-title">Staff</div><div class="page-sub">${STATE.staff.length} members</div></div>
+      <button class="btn btn-primary" onclick="openModal('addStaffModal')">+ Add staff</button>
     </div>
+    <div class="card">
+      ${STATE.staff.length === 0 ? `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No staff added yet</div><div class="empty-sub">Click "Add staff" to add your first team member</div></div>` :
+      `<div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Role</th><th>Rate</th><th>Hours/wk</th><th>Days/wk</th><th>Holiday</th></tr></thead>
+        <tbody>
+          ${STATE.staff.map(s=>`<tr>
+            <td><div class="flex-center gap-8"><div class="avatar" style="background:${s.color_light};color:${s.color}">${getInitials(s.name)}</div>${s.name}</div></td>
+            <td class="text-muted">${s.role||'—'}</td>
+            <td class="font-mono">£${parseFloat(s.hourly_rate||0).toFixed(2)}</td>
+            <td class="font-mono">${s.contracted_hours}h</td>
+            <td>${s.work_days} days</td>
+            <td>${s.holiday_allowance - s.holiday_used} / ${s.holiday_allowance} left</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`}
+    </div>`;
+}
+
+function pageTeamCalendar(el) {
+  const year = STATE.calYear, month = STATE.calMonth;
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month+1, 0);
+  const monthName = firstDay.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  let startPad = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
+  const cells = [];
+  for(let i=0;i<startPad;i++) cells.push(null);
+  for(let d=1;d<=lastDay.getDate();d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    cells.push({d, ds});
+  }
+  while(cells.length%7!==0) cells.push(null);
+  const dayHeaders = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  function workingStaff(ds) {
+    const d = new Date(ds+'T00:00:00');
+    const dow = d.getDay();
+    if(dow===0) return [];
+    return STATE.staff.filter(s => {
+      const sched = s.work_days>=5?[1,2,3,4,5]:s.work_days>=4?[1,2,3,4]:[1,2,3];
+      return sched.includes(dow);
+    });
+  }
+
+  el.innerHTML = `
+    <div class="flex-between mb-16">
+      <div><div class="page-title">Team rota</div><div class="page-sub">See who's working each day</div></div>
+      <div class="flex-center gap-8">
+        <button class="btn btn-secondary btn-sm" onclick="calPrev()">← Prev</button>
+        <span style="font-weight:600;font-size:15px;min-width:150px;text-align:center">${monthName}</span>
+        <button class="btn btn-secondary btn-sm" onclick="calNext()">Next →</button>
+      </div>
+    </div>
+    ${STATE.staff.length===0?`<div class="card"><div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No staff yet</div><div class="empty-sub">Add staff members first to see the team rota</div></div></div>`:`
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${STATE.staff.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:20px;background:${s.color_light};color:${s.color};font-weight:500">${getInitials(s.name)} ${s.name}</span>`).join('')}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">
+        ${dayHeaders.map((d,i)=>`<div style="padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:${i>=5?'var(--text3)':'var(--text2)'};text-transform:uppercase;letter-spacing:.05em">${d}</div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr)">
+        ${cells.map((cell,idx)=>{
+          if(!cell) return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;background:var(--surface2)"></div>`;
+          const isToday = cell.ds===todayStr;
+          const isWe = idx%7>=5;
+          const ws = workingStaff(cell.ds);
+          return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;padding:6px 5px;background:${isToday?'var(--brand-light)':isWe?'var(--surface2)':'var(--surface)'}">
+            <div style="font-size:13px;font-weight:${isToday?700:500};color:${isToday?'var(--brand)':isWe?'var(--text3)':'var(--text)'};margin-bottom:4px">${cell.d}</div>
+            ${isWe?'<div style="font-size:10px;color:var(--text3)">Closed</div>':ws.map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:${s.color_light};color:${s.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`}`;
+}
+
+function calPrev(){ STATE.calMonth--; if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;} renderPage(); }
+function calNext(){ STATE.calMonth++; if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;} renderPage(); }
+
+async function pageAttendance(el) {
+  el.innerHTML = `<div class="page-header"><div class="page-title">Attendance</div><div class="page-sub">Today · ${formatDate(TODAY)}</div></div><div class="loading">Loading check-ins...</div>`;
+  const { data: checkins } = await sb.from('check_ins').select('*, staff(name,color,color_light)').eq('org_id', STATE.org.id).eq('date', todayStr);
+  const ci = checkins || [];
+  el.innerHTML = `
+    <div class="page-header"><div class="page-title">Attendance</div><div class="page-sub">Today · ${formatDate(TODAY)}</div></div>
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Staff member</th><th>Role</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead>
+          <thead><tr><th>Staff member</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead>
           <tbody>
-            ${STAFF.map(s => {
-              const c = STATE.checkins[s.id];
-              const isIn = c && !c.out;
-              const hours = c && c.out ? calcHours(c.in, c.out) : (isIn ? calcHoursElapsed(c.in) + ' (running)' : '—');
+            ${STATE.staff.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:30px">No staff added yet</td></tr>`:
+            STATE.staff.map(s=>{
+              const c = ci.find(x=>x.staff_id===s.id);
+              const isIn = c && !c.check_out_time;
+              const hours = c&&c.check_in_time&&c.check_out_time ? calcHoursFromTS(c.check_in_time,c.check_out_time) : (isIn?'Running...':'—');
+              const inTime = c&&c.check_in_time ? new Date(c.check_in_time).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
+              const outTime = c&&c.check_out_time ? new Date(c.check_out_time).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
               return `<tr>
-                <td><div class="flex-center gap-8"><div class="staff-avatar" style="background:${s.colorLight};color:${s.color}">${s.initials}</div>${s.name}</div></td>
-                <td class="text-muted">${s.role}</td>
-                <td class="font-mono">${c ? c.in : '—'}</td>
-                <td class="font-mono">${c && c.out ? c.out : '—'}</td>
+                <td><div class="flex-center gap-8"><div class="avatar" style="background:${s.color_light};color:${s.color}">${getInitials(s.name)}</div>${s.name}</div></td>
+                <td class="font-mono">${inTime}</td>
+                <td class="font-mono">${outTime}</td>
                 <td class="font-mono">${hours}</td>
-                <td><span class="badge badge-${isIn ? 'teal' : c ? 'green' : 'gray'}">${isIn ? 'In' : c ? 'Completed' : 'Absent'}</span></td>
+                <td><span class="badge badge-${isIn?'brand':c?'green':'gray'}">${isIn?'Checked in':c?'Complete':'Not in'}</span></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -851,560 +667,235 @@ function pageAttendance() {
     </div>`;
 }
 
-function pageTimesheets() {
-  const allEntries = [];
-  STAFF.forEach(s => {
-    (STATE.timesheets[s.id] || []).forEach(e => {
-      if (e.status === 'pending') allEntries.push({ ...e, staff: s });
-    });
-  });
+async function pageTimesheets(el) {
+  el.innerHTML = `<div class="loading">Loading timesheets...</div>`;
+  const monthStart = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-01`;
+  const { data: checkins } = await sb.from('check_ins').select('*, staff(name,color,color_light)').eq('org_id', STATE.org.id).gte('date', monthStart).order('date', {ascending:false});
+  const ci = checkins || [];
+  const pending = ci.filter(x=>x.status==='pending').length;
 
-  return `
-    <div class="page-header">
-      <div class="page-title">Timesheets</div>
-      <div class="page-sub">${allEntries.length} pending approval</div>
+  el.innerHTML = `
+    <div class="page-header flex-between">
+      <div><div class="page-title">Timesheets</div><div class="page-sub">${TODAY.toLocaleDateString('en-GB',{month:'long',year:'numeric'})} · ${pending} pending</div></div>
+      <button class="btn btn-primary btn-sm" onclick="approveAllTimesheets()">Approve all</button>
     </div>
-    ${allEntries.length === 0 ? '<div class="card"><p class="text-muted">All timesheets approved.</p></div>' :
-    `<div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Staff</th><th>Date</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            ${allEntries.map((e,i) => `<tr>
-              <td><div class="flex-center gap-8"><div class="staff-avatar" style="background:${e.staff.colorLight};color:${e.staff.color}">${e.staff.initials}</div>${e.staff.name}</div></td>
-              <td>${formatDateShort(e.date)}</td>
-              <td class="font-mono">${e.checkIn}</td>
-              <td class="font-mono">${e.checkOut}</td>
-              <td class="font-mono">${e.hours.toFixed(1)}h</td>
-              <td><span class="badge badge-amber">Pending</span></td>
-              <td>
-                <div class="flex-center gap-8">
-                  <button class="btn btn-success btn-sm" onclick="approveTimesheet(${e.staff.id},'${e.date}')">Approve</button>
-                  <button class="btn btn-danger btn-sm" onclick="rejectTimesheet(${e.staff.id},'${e.date}')">Reject</button>
-                </div>
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-      <div class="mt-16 flex-center gap-8">
-        <button class="btn btn-primary" onclick="approveAll()">Approve all</button>
-      </div>
-    </div>`}`;
+    <div class="card">
+      ${ci.length===0?`<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-title">No timesheet entries yet</div><div class="empty-sub">Entries appear here as staff check in and out</div></div>`:
+      `<div class="table-wrap"><table>
+        <thead><tr><th>Staff</th><th>Date</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          ${ci.map(c=>{
+            const s = c.staff;
+            const inT = c.check_in_time ? new Date(c.check_in_time).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
+            const outT = c.check_out_time ? new Date(c.check_out_time).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
+            return `<tr>
+              <td><div class="flex-center gap-8"><div class="avatar" style="background:${s?.color_light||'#eee'};color:${s?.color||'#333'}">${getInitials(s?.name||'?')}</div>${s?.name||'Unknown'}</div></td>
+              <td>${formatDateShort(c.date)}</td>
+              <td class="font-mono">${inT}</td>
+              <td class="font-mono">${outT}</td>
+              <td class="font-mono">${c.hours_worked ? c.hours_worked+'h' : '—'}</td>
+              <td><span class="badge badge-${c.status==='approved'?'green':c.status==='rejected'?'red':'amber'}">${c.status}</span></td>
+              <td>${c.status==='pending'?`<div class="flex-center gap-8"><button class="btn btn-success btn-sm" onclick="approveEntry('${c.id}')">Approve</button></div>`:'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>`}
+    </div>`;
 }
 
-function pageLeaveAdmin() {
-  const allLeave = [];
-  STAFF.forEach(s => {
-    (STATE.leave[s.id] || []).forEach(l => {
-      if (l.status === 'pending') allLeave.push({ ...l, staff: s });
-    });
-  });
+async function approveEntry(id) {
+  await sb.from('check_ins').update({ status:'approved' }).eq('id', id);
+  showToast('Entry approved'); pageTimesheets(document.getElementById('pageContent'));
+}
 
-  return `
-    <div class="page-header">
-      <div class="page-title">Leave requests</div>
-      <div class="page-sub">${allLeave.length} pending</div>
+async function approveAllTimesheets() {
+  await sb.from('check_ins').update({ status:'approved' }).eq('org_id', STATE.org.id).eq('status','pending');
+  showToast('All timesheets approved'); pageTimesheets(document.getElementById('pageContent'));
+}
+
+async function pageLeave(el) {
+  el.innerHTML = `<div class="loading">Loading leave requests...</div>`;
+  const { data: leaves } = await sb.from('leave_requests').select('*, staff(name,color,color_light)').eq('org_id', STATE.org.id).order('created_at',{ascending:false});
+  const lv = leaves || [];
+  const pending = lv.filter(x=>x.status==='pending').length;
+
+  el.innerHTML = `
+    <div class="page-header flex-between">
+      <div><div class="page-title">Leave requests</div><div class="page-sub">${pending} pending</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('leaveModal')">+ New request</button>
     </div>
-    ${allLeave.length === 0 ? '<div class="card"><p class="text-muted">No pending leave requests.</p></div>' :
-    allLeave.map(l => `
+    ${lv.length===0?`<div class="card"><div class="empty-state"><div class="empty-icon">🏖️</div><div class="empty-title">No leave requests yet</div><div class="empty-sub">Staff leave requests will appear here</div></div></div>`:
+    lv.map(l=>`
       <div class="card mb-12">
         <div class="flex-between mb-12">
           <div class="flex-center gap-10">
-            <div class="staff-avatar" style="background:${l.staff.colorLight};color:${l.staff.color}">${l.staff.initials}</div>
-            <div><div style="font-weight:600">${l.staff.name}</div><div class="text-sm text-muted">${l.staff.role}</div></div>
+            <div class="avatar" style="background:${l.staff?.color_light||'#eee'};color:${l.staff?.color||'#333'}">${getInitials(l.staff?.name||'?')}</div>
+            <div><div style="font-weight:600">${l.staff?.name||'Unknown'}</div><div class="text-sm text-muted">${l.leave_type}</div></div>
           </div>
-          <span class="badge badge-amber">Pending</span>
+          <span class="badge badge-${l.status==='approved'?'green':l.status==='rejected'?'red':'amber'}">${l.status}</span>
         </div>
         <div class="grid-2 mb-12">
-          <div><div class="text-xs text-muted mb-4">Leave type</div><div style="font-weight:500">${l.type}</div></div>
-          <div><div class="text-xs text-muted mb-4">Duration</div><div style="font-weight:500">${l.days} day${l.days > 1 ? 's' : ''}</div></div>
-          <div><div class="text-xs text-muted mb-4">From</div><div style="font-weight:500">${l.start}</div></div>
-          <div><div class="text-xs text-muted mb-4">To</div><div style="font-weight:500">${l.end}</div></div>
+          <div><div class="text-xs text-muted mb-4">From</div><div style="font-weight:500">${l.start_date}</div></div>
+          <div><div class="text-xs text-muted mb-4">To</div><div style="font-weight:500">${l.end_date}</div></div>
+          <div><div class="text-xs text-muted mb-4">Duration</div><div style="font-weight:500">${l.days} day${l.days>1?'s':''}</div></div>
+          <div><div class="text-xs text-muted mb-4">Submitted</div><div style="font-weight:500">${formatDateShort(l.created_at?.split('T')[0])}</div></div>
         </div>
-        ${l.notes ? `<div style="background:var(--surface2);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px">${l.notes}</div>` : ''}
-        <div class="flex-center gap-8">
-          <div class="text-xs text-muted" style="margin-right:auto">${l.staff.holidayAllowance - l.staff.holidayUsed} days remaining</div>
-          <button class="btn btn-danger btn-sm" onclick="rejectLeave(${l.staff.id}, ${l.id})">Reject</button>
-          <button class="btn btn-success btn-sm" onclick="approveLeave(${l.staff.id}, ${l.id})">Approve</button>
-        </div>
+        ${l.notes?`<div style="background:var(--surface2);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px">${l.notes}</div>`:''}
+        ${l.status==='pending'?`<div class="flex-center gap-8">
+          <button class="btn btn-danger btn-sm" onclick="updateLeave('${l.id}','rejected')">Reject</button>
+          <button class="btn btn-success btn-sm" onclick="updateLeave('${l.id}','approved')">Approve</button>
+        </div>`:''}
       </div>`).join('')}`;
 }
 
-function pagePayroll() {
-  const month = 'May 2026';
-  return `
+async function updateLeave(id, status) {
+  await sb.from('leave_requests').update({ status }).eq('id', id);
+  showToast(`Leave ${status}`); pageLeave(document.getElementById('pageContent'));
+}
+
+async function submitLeave() {
+  const type = document.getElementById('leaveType').value;
+  const start = document.getElementById('leaveStart').value;
+  const end = document.getElementById('leaveEnd').value;
+  const notes = document.getElementById('leaveNotes').value;
+  if (!start || !end) { showToast('Please select dates'); return; }
+  if (!STATE.staff.length) { showToast('No staff found'); return; }
+  const days = Math.max(1, Math.round((new Date(end)-new Date(start))/86400000)+1);
+  const { error } = await sb.from('leave_requests').insert({
+    org_id: STATE.org.id, staff_id: STATE.staff[0].id,
+    leave_type: type, start_date: start, end_date: end, days, notes
+  });
+  if (error) { showToast('Error: '+error.message); return; }
+  closeModal('leaveModal'); showToast('Leave request submitted');
+  if (STATE.page==='leave') pageLeave(document.getElementById('pageContent'));
+}
+
+async function pagePayroll(el) {
+  el.innerHTML = `<div class="loading">Loading payroll...</div>`;
+  const monthStart = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-01`;
+  const { data: checkins } = await sb.from('check_ins').select('*').eq('org_id', STATE.org.id).eq('status','approved').gte('date',monthStart);
+  const { data: bonuses } = await sb.from('bonuses').select('*').eq('org_id', STATE.org.id);
+  const ci = checkins || [];
+  const bo = bonuses || [];
+
+  const totalPayroll = STATE.staff.reduce((a,s)=>{
+    const hours = ci.filter(x=>x.staff_id===s.id).reduce((h,x)=>h+(parseFloat(x.hours_worked)||0),0);
+    const gross = hours * parseFloat(s.hourly_rate||0);
+    const bon = bo.filter(x=>x.staff_id===s.id&&x.type==='bonus').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+    const ded = bo.filter(x=>x.staff_id===s.id&&x.type==='deduction').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+    return a + gross + bon - ded;
+  },0);
+
+  el.innerHTML = `
     <div class="page-header flex-between">
-      <div><div class="page-title">Payroll</div><div class="page-sub">${month}</div></div>
+      <div><div class="page-title">Payroll</div><div class="page-sub">${TODAY.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div></div>
       <div class="flex-center gap-8">
         <button class="btn btn-secondary btn-sm" onclick="openBonusModal()">+ Bonus / deduction</button>
-        <button class="btn btn-primary btn-sm" onclick="exportPayroll()">Export PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Payroll approved — accountant notified')">Approve & send</button>
       </div>
     </div>
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Staff member</th><th>Role</th><th>Rate</th><th>Hours</th><th>Gross</th><th>Bonus</th><th>Deduction</th><th>Total</th><th>Status</th></tr></thead>
+          <thead><tr><th>Staff</th><th>Role</th><th>Rate</th><th>Hours</th><th>Gross</th><th>Bonus</th><th>Deduction</th><th>Total</th></tr></thead>
           <tbody>
-            ${STAFF.map(s => {
-              const hours = getStaffMonthHours(s.id);
-              const gross = hours * s.rate;
-              const bonuses = (STATE.bonuses[s.id] || []).filter(b => b.type === 'bonus').reduce((a,b) => a + b.amount, 0);
-              const deductions = (STATE.bonuses[s.id] || []).filter(b => b.type === 'deduction').reduce((a,b) => a + b.amount, 0);
-              const total = gross + bonuses - deductions;
+            ${STATE.staff.length===0?`<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:30px">Add staff to generate payroll</td></tr>`:
+            STATE.staff.map(s=>{
+              const hours = ci.filter(x=>x.staff_id===s.id).reduce((h,x)=>h+(parseFloat(x.hours_worked)||0),0);
+              const gross = hours * parseFloat(s.hourly_rate||0);
+              const bon = bo.filter(x=>x.staff_id===s.id&&x.type==='bonus').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+              const ded = bo.filter(x=>x.staff_id===s.id&&x.type==='deduction').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+              const total = gross+bon-ded;
               return `<tr>
-                <td><div class="flex-center gap-8"><div class="staff-avatar" style="background:${s.colorLight};color:${s.color}">${s.initials}</div>${s.name}</div></td>
-                <td class="text-muted text-sm">${s.role}</td>
-                <td class="font-mono">£${s.rate.toFixed(2)}</td>
-                <td class="font-mono">${hours.toFixed(1)}</td>
+                <td><div class="flex-center gap-8"><div class="avatar" style="background:${s.color_light};color:${s.color}">${getInitials(s.name)}</div>${s.name}</div></td>
+                <td class="text-muted text-sm">${s.role||'—'}</td>
+                <td class="font-mono">£${parseFloat(s.hourly_rate||0).toFixed(2)}</td>
+                <td class="font-mono">${hours.toFixed(1)}h</td>
                 <td class="font-mono">£${gross.toFixed(2)}</td>
-                <td class="font-mono" style="color:var(--green)">${bonuses > 0 ? '+£' + bonuses.toFixed(2) : '—'}</td>
-                <td class="font-mono" style="color:var(--red)">${deductions > 0 ? '-£' + deductions.toFixed(2) : '—'}</td>
+                <td class="font-mono" style="color:var(--green)">${bon>0?'+£'+bon.toFixed(2):'—'}</td>
+                <td class="font-mono" style="color:var(--red)">${ded>0?'-£'+ded.toFixed(2):'—'}</td>
                 <td class="font-mono font-600">£${total.toFixed(2)}</td>
-                <td><span class="badge badge-amber">Draft</span></td>
               </tr>`;
             }).join('')}
           </tbody>
           <tfoot>
             <tr style="background:var(--surface2)">
-              <td colspan="4" style="font-weight:600;padding:12px 14px">Total payroll</td>
-              <td class="font-mono font-600">£${STAFF.reduce((a,s) => a + getStaffMonthHours(s.id) * s.rate, 0).toFixed(2)}</td>
-              <td class="font-mono font-600" style="color:var(--green)">+£${Object.values(STATE.bonuses).flat().filter(b => b.type === 'bonus').reduce((a,b) => a + b.amount, 0).toFixed(2)}</td>
-              <td class="font-mono font-600" style="color:var(--red)">-£${Object.values(STATE.bonuses).flat().filter(b => b.type === 'deduction').reduce((a,b) => a + b.amount, 0).toFixed(2)}</td>
-              <td class="font-mono font-600">£${STAFF.reduce((a,s) => {
-                const h = getStaffMonthHours(s.id);
-                const g = h * s.rate;
-                const bon = (STATE.bonuses[s.id] || []).filter(b => b.type === 'bonus').reduce((x,b) => x + b.amount, 0);
-                const ded = (STATE.bonuses[s.id] || []).filter(b => b.type === 'deduction').reduce((x,b) => x + b.amount, 0);
-                return a + g + bon - ded;
-              }, 0).toFixed(2)}</td>
-              <td></td>
+              <td colspan="7" style="font-weight:600;padding:12px 14px">Total payroll</td>
+              <td class="font-mono font-600">£${totalPayroll.toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <div class="mt-16 flex-center gap-8">
-        <button class="btn btn-primary" onclick="approvePayroll()">Approve & send to accountant</button>
-      </div>
     </div>`;
 }
 
-function pageRotaAdmin() {
-  const days = getWeekDays(TODAY);
-  return `
-    <div class="page-header flex-between">
-      <div><div class="page-title">Rota management</div><div class="page-sub">Week of ${formatDateShort(days[0].str)}</div></div>
-      <div class="flex-center gap-8">
-        <button class="btn btn-secondary btn-sm" onclick="prevWeek()">← Prev</button>
-        <button class="btn btn-secondary btn-sm" onclick="nextWeek()">Next →</button>
-        <button class="btn btn-primary btn-sm" onclick="publishRota()">Publish rota</button>
-      </div>
-    </div>
-    <div class="card" style="overflow-x:auto">
-      <div class="rota-grid" style="min-width:640px">
-        <div class="rota-head"></div>
-        ${days.map(d => `<div class="rota-head" style="${d.str === todayStr ? 'color:var(--teal)' : ''}">${d.label.split(' ')[0]}<br><span style="font-size:10px;font-weight:400">${d.label.split(' ')[1]}</span></div>`).join('')}
-        ${STAFF.map(s => {
-          const schedule = getStaffSchedule(s);
-          return `
-            <div class="rota-staff-name">
-              <div class="staff-avatar" style="width:24px;height:24px;font-size:10px;background:${s.colorLight};color:${s.color}">${s.initials}</div>
-              <span style="font-size:11px">${s.name.split(' ')[0]}</span>
-            </div>
-            ${days.map(d => {
-              const isWork = schedule.includes(d.dow);
-              const hasLeave = (STATE.leave[s.id] || []).some(l => l.status === 'approved' && l.start <= d.str && l.end >= d.str);
-              return `<div class="rota-cell ${hasLeave ? 'rota-leave' : isWork ? 'rota-work' : 'rota-off'}" onclick="toggleRotaCell(${s.id}, '${d.str}')">
-                ${hasLeave ? 'Leave' : isWork ? '8–17' : 'Off'}
-              </div>`;
-            }).join('')}`;
-        }).join('')}
-      </div>
-      <div class="mt-12 flex-center gap-12 text-xs text-muted">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--teal-light);margin-right:4px"></span>Working</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--surface2);margin-right:4px"></span>Day off</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--amber-light);margin-right:4px"></span>On leave</span>
-      </div>
-    </div>`;
-}
-
-function pageReports() {
-  const totalPayroll = STAFF.reduce((a,s) => a + getStaffMonthHours(s.id) * s.rate, 0);
-  const totalHours = STAFF.reduce((a,s) => a + getStaffMonthHours(s.id), 0);
-  return `
-    <div class="page-header">
-      <div class="page-title">Reports</div>
-      <div class="page-sub">May 2026 summary</div>
-    </div>
-    <div class="grid-3 mb-20">
-      <div class="stat"><div class="stat-val">£${totalPayroll.toFixed(0)}</div><div class="stat-lbl">Total payroll this month</div></div>
-      <div class="stat"><div class="stat-val">${totalHours.toFixed(0)}h</div><div class="stat-lbl">Total hours worked</div></div>
-      <div class="stat"><div class="stat-val">${getPendingLeaveCount()}</div><div class="stat-lbl">Leave requests pending</div></div>
-    </div>
-    <div class="card mb-16">
-      <div style="font-weight:600;margin-bottom:16px">Holiday balance summary</div>
-      ${STAFF.map(s => {
-        const used = s.holidayUsed;
-        const total = s.holidayAllowance;
-        const pct = Math.round((used / total) * 100);
-        return `<div style="margin-bottom:12px">
-          <div class="flex-between mb-4">
-            <div class="flex-center gap-8">
-              <div class="staff-avatar" style="width:24px;height:24px;font-size:10px;background:${s.colorLight};color:${s.color}">${s.initials}</div>
-              <span class="text-sm font-600">${s.name}</span>
-            </div>
-            <span class="text-xs text-muted font-mono">${used}/${total} days</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${s.color}"></div></div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="card">
-      <div style="font-weight:600;margin-bottom:16px">Payroll breakdown by role</div>
-      ${['Dentist','Hygienist','Dental Nurse','Receptionist','Practice Manager'].map(role => {
-        const staff = STAFF.filter(s => s.role === role);
-        if (!staff.length) return '';
-        const total = staff.reduce((a,s) => a + getStaffMonthHours(s.id) * s.rate, 0);
-        return `<div class="payroll-row"><span>${role} (${staff.length})</span><span class="font-mono font-600">£${total.toFixed(2)}</span></div>`;
-      }).join('')}
-      <div class="payroll-total"><span>Total</span><span class="font-mono">£${totalPayroll.toFixed(2)}</span></div>
-    </div>`;
-}
-
-function pageTeamCalendar() {
-  const calYear = STATE.calYear || TODAY.getFullYear();
-  const calMonth = STATE.calMonth !== undefined ? STATE.calMonth : TODAY.getMonth();
-  const firstDay = new Date(calYear, calMonth, 1);
-  const lastDay = new Date(calYear, calMonth + 1, 0);
-  const monthName = firstDay.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
-
-  // Build rota map: date -> [staffIds working]
-  function staffWorkingOn(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00');
-    const dow = d.getDay();
-    if (dow === 0) return []; // Sunday off always
-    return STAFF.filter(s => {
-      // Check not on approved leave
-      const onLeave = (STATE.leave[s.id] || []).some(l => l.status === 'approved' && l.start <= dateStr && l.end >= dateStr);
-      if (onLeave) return false;
-      const schedule = getStaffSchedule(s);
-      return schedule.includes(dow);
-    });
-  }
-
-  // Calendar grid: pad start to Monday
-  let startPad = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-  const cells = [];
-  for (let i = 0; i < startPad; i++) cells.push(null);
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    cells.push({ d, dateStr });
-  }
-  // Pad to full weeks
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const dayHeaders = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-  const isAdmin = STATE.role === 'admin';
-  const viewingStaffId = STATE.currentStaffId;
-
-  return `
-    <div style="max-width:900px">
-      <div class="flex-between mb-16">
-        <div>
-          <div class="page-title">Team rota</div>
-          <div class="page-sub">See who's working each day</div>
-        </div>
-        <div class="flex-center gap-8">
-          <button class="btn btn-secondary btn-sm" onclick="calPrev()">← Prev</button>
-          <span style="font-weight:600;font-size:15px;min-width:140px;text-align:center">${monthName}</span>
-          <button class="btn btn-secondary btn-sm" onclick="calNext()">Next →</button>
-        </div>
-      </div>
-
-      <div style="display:flex;gap-8;flex-wrap:wrap;margin-bottom:14px;gap:6px">
-        ${STAFF.map(s => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:20px;background:${s.colorLight};color:${s.color};font-weight:500">${s.initials} ${s.name}</span>`).join('')}
-      </div>
-
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">
-          ${dayHeaders.map((d,i) => `<div style="padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:${i>=5 ? 'var(--text3)' : 'var(--text2)'};text-transform:uppercase;letter-spacing:.05em">${d}</div>`).join('')}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr)">
-          ${cells.map((cell, idx) => {
-            if (!cell) return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;background:var(--surface2)"></div>`;
-            const isToday = cell.dateStr === todayStr;
-            const isSat = (idx % 7) === 5;
-            const isSun = (idx % 7) === 6;
-            const isWeekend = isSat || isSun;
-            const working = staffWorkingOn(cell.dateStr);
-            // Highlight current user's day
-            const myDay = !isWeekend && working.some(s => s.id === viewingStaffId);
-
-            return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;padding:6px 5px;background:${isToday ? 'var(--teal-light)' : isWeekend ? 'var(--surface2)' : 'var(--surface)'};position:relative">
-              <div style="font-size:13px;font-weight:${isToday ? 700 : 500};color:${isToday ? 'var(--teal)' : isWeekend ? 'var(--text3)' : 'var(--text)'};margin-bottom:5px">${cell.d}</div>
-              ${isWeekend ? '' : working.map(s => `
-                <div style="display:flex;align-items:center;gap:3px;margin-bottom:2px;cursor:pointer" title="${s.name} · ${s.role}">
-                  <div style="width:16px;height:16px;border-radius:50%;background:${s.colorLight};color:${s.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${s.initials.charAt(0)}</div>
-                  <span style="font-size:10px;font-weight:${s.id === viewingStaffId ? 700 : 400};color:${s.id === viewingStaffId ? s.color : 'var(--text2)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px">${s.name}</span>
-                </div>`).join('')}
-              ${isWeekend ? '<div style="font-size:10px;color:var(--text3);margin-top:4px">Closed</div>' : working.length === 0 ? '<div style="font-size:10px;color:var(--text3)">No staff</div>' : ''}
-              ${myDay ? `<div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--teal)"></div>` : ''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-      <div class="mt-12 flex-center gap-16 text-xs text-muted">
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--teal);margin-right:4px"></span>Your working day</span>
-        <span>Tap any staff dot to see their role</span>
-        ${isAdmin ? '<button class="btn btn-primary btn-sm" onclick="navigate(\'rota_admin\')" style="margin-left:auto">Edit rota →</button>' : ''}
-      </div>
-    </div>`;
-}
-
-function calPrev() {
-  let m = STATE.calMonth !== undefined ? STATE.calMonth : TODAY.getMonth();
-  let y = STATE.calYear || TODAY.getFullYear();
-  m--; if (m < 0) { m = 11; y--; }
-  STATE.calMonth = m; STATE.calYear = y;
-  renderPage();
-}
-function calNext() {
-  let m = STATE.calMonth !== undefined ? STATE.calMonth : TODAY.getMonth();
-  let y = STATE.calYear || TODAY.getFullYear();
-  m++; if (m > 11) { m = 0; y++; }
-  STATE.calMonth = m; STATE.calYear = y;
-  renderPage();
-}
-
-function doCheckIn() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  const now = `${String(TODAY.getHours()).padStart(2,'0')}:${String(TODAY.getMinutes()).padStart(2,'0')}`;
-  STATE.checkins[staff.id] = { in: now, out: null, date: todayStr };
-  save(); showToast(`${staff.name.split(' ')[0]} checked in at ${now}`); renderPage();
-}
-
-function doCheckOut() {
-  const staff = STAFF.find(s => s.id === STATE.currentStaffId);
-  const now = `${String(TODAY.getHours()).padStart(2,'0')}:${String(TODAY.getMinutes()).padStart(2,'0')}`;
-  STATE.checkins[staff.id].out = now;
-  const hrs = calcHours(STATE.checkins[staff.id].in, now);
-  save(); showToast(`Checked out — ${hrs} today`); renderPage();
-}
-
-function approveTimesheet(staffId, date) {
-  const ts = STATE.timesheets[staffId];
-  if (ts) {
-    const entry = ts.find(e => e.date === date);
-    if (entry) entry.status = 'approved';
-  }
-  save(); showToast('Timesheet approved'); renderPage();
-}
-
-function rejectTimesheet(staffId, date) {
-  const ts = STATE.timesheets[staffId];
-  if (ts) {
-    const entry = ts.find(e => e.date === date);
-    if (entry) entry.status = 'rejected';
-  }
-  save(); showToast('Timesheet rejected'); renderPage();
-}
-
-function approveAll() {
-  STAFF.forEach(s => {
-    (STATE.timesheets[s.id] || []).forEach(e => { if (e.status === 'pending') e.status = 'approved'; });
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+async function saveStaff() {
+  const name = document.getElementById('staffName').value.trim();
+  const role = document.getElementById('staffRole').value.trim();
+  const rate = parseFloat(document.getElementById('staffRate').value||0);
+  const hours = parseFloat(document.getElementById('staffHours').value||37.5);
+  const days = parseInt(document.getElementById('staffDays').value||5);
+  const holiday = parseInt(document.getElementById('staffHoliday').value||25);
+  if (!name) { showToast('Please enter a name'); return; }
+  const colorIdx = STATE.staff.length % COLORS.length;
+  const col = COLORS[colorIdx];
+  const { error } = await sb.from('staff').insert({
+    org_id: STATE.org.id, name, role, hourly_rate: rate,
+    contracted_hours: hours, work_days: days, holiday_allowance: holiday,
+    color: col.c, color_light: col.l
   });
-  save(); showToast('All timesheets approved'); renderPage();
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('addStaffModal');
+  showToast(`${name} added`);
+  ['staffName','staffRole','staffRate','staffHours','staffHoliday'].forEach(id => document.getElementById(id).value='');
+  renderPage();
 }
 
-function approveLeave(staffId, leaveId) {
-  const leave = STATE.leave[staffId];
-  if (leave) {
-    const entry = leave.find(l => l.id === leaveId);
-    if (entry) { entry.status = 'approved'; const s = STAFF.find(x => x.id === staffId); if (s) s.holidayUsed += entry.days; }
-  }
-  save(); showToast('Leave approved'); renderPage();
-}
-
-function rejectLeave(staffId, leaveId) {
-  const leave = STATE.leave[staffId];
-  if (leave) { const entry = leave.find(l => l.id === leaveId); if (entry) entry.status = 'rejected'; }
-  save(); showToast('Leave rejected'); renderPage();
-}
-
-function submitLeave() {
-  const type = document.getElementById('leaveType').value;
-  const start = document.getElementById('leaveStart').value;
-  const end = document.getElementById('leaveEnd').value;
-  const notes = document.getElementById('leaveNotes').value;
-  if (!start || !end) { showToast('Please select start and end dates'); return; }
-  const days = Math.max(1, Math.round((new Date(end) - new Date(start)) / 86400000) + 1);
-  const id = Date.now();
-  if (!STATE.leave[STATE.currentStaffId]) STATE.leave[STATE.currentStaffId] = [];
-  STATE.leave[STATE.currentStaffId].unshift({ id, type, start, end, days, status: 'pending', notes });
-  save(); closeModal('leaveModal'); showToast('Leave request submitted'); renderPage();
-}
-
-function addBonusDeduction() {
-  const staffId = parseInt(document.getElementById('bonusStaff').value);
+async function saveBonus() {
+  const staffId = document.getElementById('bonusStaffSel').value;
   const type = document.getElementById('bonusType').value;
-  const amount = parseFloat(document.getElementById('bonusAmount').value);
+  const amount = parseFloat(document.getElementById('bonusAmount').value||0);
   const reason = document.getElementById('bonusReason').value;
-  if (!amount || amount <= 0) { showToast('Please enter a valid amount'); return; }
-  if (!STATE.bonuses[staffId]) STATE.bonuses[staffId] = [];
-  STATE.bonuses[staffId].push({ type, amount, reason, date: todayStr });
-  save(); closeModal('bonusModal'); showToast(`${type === 'bonus' ? 'Bonus' : 'Deduction'} of £${amount.toFixed(2)} added`); renderPage();
+  if (!staffId || !amount) { showToast('Please fill in all fields'); return; }
+  const { error } = await sb.from('bonuses').insert({ org_id:STATE.org.id, staff_id:staffId, type, amount, reason });
+  if (error) { showToast('Error: '+error.message); return; }
+  closeModal('bonusModal'); showToast(`${type} of £${amount.toFixed(2)} added`);
+  if (STATE.page==='payroll') pagePayroll(document.getElementById('pageContent'));
 }
-
-function approvePayroll() {
-  showToast('Payroll approved and sent to accountant'); 
-}
-
-function exportPayroll() {
-  showToast('PDF export generated (demo)');
-}
-
-function publishRota() {
-  showToast('Rota published — staff notified');
-}
-
-function toggleRotaCell(staffId, date) {
-  showToast('Rota updated (click to toggle shifts)');
-}
-
-function doAdminCheckin() {
-  showToast('Admin check-in: select staff member from attendance table');
-}
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-
-function getGreeting() {
-  const h = TODAY.getHours();
-  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-}
-
-function formatDate(d) {
-  return d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-}
-
-function formatDateShort(str) {
-  const d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-}
-
-function calcHours(inTime, outTime) {
-  const [ih, im] = inTime.split(':').map(Number);
-  const [oh, om] = outTime.split(':').map(Number);
-  const mins = (oh * 60 + om) - (ih * 60 + im);
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}h ${String(m).padStart(2,'0')}m`;
-}
-
-function calcHoursElapsed(inTime) {
-  const [ih, im] = inTime.split(':').map(Number);
-  const now = TODAY.getHours() * 60 + TODAY.getMinutes();
-  const inMins = ih * 60 + im;
-  const elapsed = Math.max(0, now - inMins);
-  return `${Math.floor(elapsed/60)}h ${elapsed%60}m`;
-}
-
-function getStaffWeekHours(staffId) {
-  const weekStart = new Date(TODAY);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
-  const weekStartStr = fmt(weekStart);
-  return (STATE.timesheets[staffId] || [])
-    .filter(e => e.date >= weekStartStr && e.date <= todayStr && e.status !== 'rejected')
-    .reduce((a,e) => a + e.hours, 0);
-}
-
-function getStaffMonthHours(staffId) {
-  const monthStart = todayStr.substring(0,8) + '01';
-  return (STATE.timesheets[staffId] || [])
-    .filter(e => e.date >= monthStart && e.date <= todayStr && e.status !== 'rejected')
-    .reduce((a,e) => a + e.hours, 0);
-}
-
-function getWeekDays(date) {
-  const days = [];
-  const dow = date.getDay();
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - ((dow + 6) % 7));
-  const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days.push({ d, str: fmt(d), label: labels[i] + ' ' + d.getDate(), dow: d.getDay() });
-  }
-  return days;
-}
-
-function getStaffSchedule(staff) {
-  if (staff.workDays === 5) return [1,2,3,4,5];
-  if (staff.workDays === 4) return [1,2,3,4];
-  return [1,2,3];
-}
-
-// ── MODALS ────────────────────────────────────────────────────────────────────
-
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-function openRoleModal() { openModal('roleModal'); }
 
 function openBonusModal() {
-  const sel = document.getElementById('bonusStaff');
-  if (sel) sel.innerHTML = STAFF.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const sel = document.getElementById('bonusStaffSel');
+  sel.innerHTML = STATE.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   openModal('bonusModal');
 }
 
-function setRole(role) {
-  STATE.role = role;
-  const defaultPages = { admin:'team_calendar', staff:'team_calendar', accountant:'payroll' };
-  STATE.page = defaultPages[role];
-  if (role === 'staff') STATE.currentStaffId = 1;
-  if (!STATE.calMonth && STATE.calMonth !== 0) STATE.calMonth = TODAY.getMonth();
-  if (!STATE.calYear) STATE.calYear = TODAY.getFullYear();
-  save(); closeModal('roleModal'); renderNav(); renderPage();
+function calcHoursFromTS(inTS, outTS) {
+  const mins = (new Date(outTS) - new Date(inTS)) / 60000;
+  return `${Math.floor(mins/60)}h ${Math.round(mins%60)}m`;
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
-
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-}
-
-// Close sidebar when clicking outside on mobile
 document.addEventListener('click', e => {
-  const sidebar = document.getElementById('sidebar');
-  if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target)) {
-    sidebar.classList.remove('open');
-  }
+  const sb2 = document.getElementById('sidebar');
+  if(window.innerWidth<=768 && sb2.classList.contains('open') && !sb2.contains(e.target)) sb2.classList.remove('open');
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-
-function init() {
-  STATE.role = 'staff';
-  STATE.page = 'team_calendar';
-  STATE.calMonth = TODAY.getMonth();
-  STATE.calYear = TODAY.getFullYear();
-  // Seed some checkins
-  if (Object.keys(STATE.checkins).length === 0) {
-    STATE.checkins[3] = { in: '08:05', out: null, date: todayStr };
-    STATE.checkins[5] = { in: '07:58', out: null, date: todayStr };
-    STATE.checkins[8] = { in: '08:12', out: null, date: todayStr };
-    STATE.checkins[9] = { in: '08:01', out: null, date: todayStr };
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await loadUserAndStart(session.user);
   }
-  renderNav();
-  renderPage();
 }
 
 init();
