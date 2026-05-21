@@ -1048,4 +1048,173 @@ async function saveStaff() {
     contracted_hours: hours, work_days: selectedDays.length,
     working_days_array: selectedDays,
     holiday_allowance: holiday,
-    color: col.c, color_
+    color: col.c, color_light: col.l
+  });
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('addStaffModal');
+  showToast(`${name} added`);
+  ['staffName','staffRole','staffRate','staffHours','staffHoliday'].forEach(id => document.getElementById(id).value='');
+  // Reset checkboxes to Mon-Fri
+  [1,2,3,4,5].forEach(d => document.getElementById('day_'+d).checked = true);
+  [0,6].forEach(d => document.getElementById('day_'+d).checked = false);
+  renderPage();
+}
+
+async function saveBonus() {
+  const staffId = document.getElementById('bonusStaffSel').value;
+  const type = document.getElementById('bonusType').value;
+  const amount = parseFloat(document.getElementById('bonusAmount').value||0);
+  const reason = document.getElementById('bonusReason').value;
+  if (!staffId || !amount) { showToast('Please fill in all fields'); return; }
+  const { error } = await sb.from('bonuses').insert({ org_id:STATE.org.id, staff_id:staffId, type, amount, reason });
+  if (error) { showToast('Error: '+error.message); return; }
+  closeModal('bonusModal'); showToast(`${type} of £${amount.toFixed(2)} added`);
+  if (STATE.page==='payroll') pagePayroll(document.getElementById('pageContent'));
+}
+
+function openEditStaff(id) {
+  const s = STATE.staff.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('editStaffId').value = s.id;
+  document.getElementById('editStaffName').value = s.name;
+  document.getElementById('editStaffRole').value = s.role || '';
+  document.getElementById('editStaffRate').value = s.hourly_rate || 0;
+  document.getElementById('editStaffHours').value = s.contracted_hours || 37.5;
+  document.getElementById('editStaffHoliday').value = s.holiday_allowance || 25;
+  const days = s.working_days_array && s.working_days_array.length > 0
+    ? s.working_days_array
+    : s.work_days >= 5 ? [1,2,3,4,5] : s.work_days >= 4 ? [1,2,3,4] : [1,2,3];
+  [0,1,2,3,4,5,6].forEach(d => {
+    const cb = document.getElementById('edit_day_'+d);
+    if (cb) cb.checked = days.includes(d);
+  });
+  openModal('editStaffModal');
+}
+
+async function updateStaff() {
+  const id = document.getElementById('editStaffId').value;
+  const name = document.getElementById('editStaffName').value.trim();
+  const role = document.getElementById('editStaffRole').value.trim();
+  const rate = parseFloat(document.getElementById('editStaffRate').value||0);
+  const hours = parseFloat(document.getElementById('editStaffHours').value||37.5);
+  const holiday = parseInt(document.getElementById('editStaffHoliday').value||25);
+  const selectedDays = [0,1,2,3,4,5,6].filter(d => {
+    const cb = document.getElementById('edit_day_'+d);
+    return cb && cb.checked;
+  });
+  if (!name) { showToast('Please enter a name'); return; }
+  if (selectedDays.length === 0) { showToast('Please select at least one working day'); return; }
+  const { error } = await sb.from('staff').update({
+    name, role, hourly_rate: rate, contracted_hours: hours,
+    work_days: selectedDays.length, working_days_array: selectedDays,
+    holiday_allowance: holiday
+  }).eq('id', id);
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('editStaffModal');
+  showToast(`${name} updated`);
+  renderPage();
+}
+
+async function deleteStaff() {
+  const id = document.getElementById('editStaffId').value;
+  const s = STATE.staff.find(x => x.id === id);
+  if (!confirm(`Delete ${s?.name}? This cannot be undone.`)) return;
+  const { error } = await sb.from('staff').delete().eq('id', id);
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('editStaffModal');
+  showToast('Staff member deleted');
+  renderPage();
+}
+
+async function approveAndSendPayroll() {
+  // Load settings for accountant email
+  const { data: settings } = await sb.from('settings').select('*').eq('org_id', STATE.org.id).maybeSingle();
+  const accEmail = settings?.accountant_email || '';
+  const accName = settings?.accountant_name || 'Accountant';
+
+  if (!accEmail) {
+    showToast('Please add accountant email in Settings first');
+    navigate('settings');
+    return;
+  }
+
+  // Build payroll summary
+  const monthStart = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-01`;
+  const { data: checkins } = await sb.from('check_ins').select('*').eq('org_id', STATE.org.id).eq('status','approved').gte('date',monthStart);
+  const { data: bonuses } = await sb.from('bonuses').select('*').eq('org_id', STATE.org.id);
+  const ci = checkins || [];
+  const bo = bonuses || [];
+  const month = TODAY.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  let body = `Payroll Summary — ${STATE.org.name}\n`;
+  body += `Period: ${month}\n`;
+  body += `Prepared: ${formatDate(TODAY)}\n\n`;
+  body += `${'Staff'.padEnd(20)} ${'Hours'.padEnd(8)} ${'Rate'.padEnd(8)} ${'Gross'.padEnd(10)} ${'Bonus'.padEnd(8)} ${'Total'}\n`;
+  body += '─'.repeat(65) + '\n';
+
+  let grandTotal = 0;
+  STATE.staff.forEach(s => {
+    const hours = ci.filter(x=>x.staff_id===s.id).reduce((h,x)=>h+(parseFloat(x.hours_worked)||0),0);
+    const gross = hours * parseFloat(s.hourly_rate||0);
+    const bon = bo.filter(x=>x.staff_id===s.id&&x.type==='bonus').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+    const ded = bo.filter(x=>x.staff_id===s.id&&x.type==='deduction').reduce((h,x)=>h+parseFloat(x.amount||0),0);
+    const total = gross + bon - ded;
+    grandTotal += total;
+    body += `${s.name.padEnd(20)} ${(hours.toFixed(1)+'h').padEnd(8)} ${'£'+parseFloat(s.hourly_rate||0).toFixed(2).padEnd(7)} ${'£'+gross.toFixed(2).padEnd(9)} ${'£'+bon.toFixed(2).padEnd(7)} £${total.toFixed(2)}\n`;
+  });
+
+  body += '─'.repeat(65) + '\n';
+  body += `${'TOTAL PAYROLL'.padEnd(52)} £${grandTotal.toFixed(2)}\n\n`;
+  body += `Please process the above payroll at your earliest convenience.\n\nKind regards,\n${STATE.admin?.name || 'Admin'}\n${STATE.org.name}`;
+
+  const subject = `Payroll Summary — ${STATE.org.name} — ${month}`;
+  const mailto = `mailto:${accEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+  showToast('Opening email to ' + accName);
+}
+
+async function loadSettings() {
+  const { data } = await sb.from('settings').select('*').eq('org_id', STATE.org.id).maybeSingle();
+  STATE.settings = data || {};
+}
+
+function openBonusModal() {
+  const sel = document.getElementById('bonusStaffSel');
+  sel.innerHTML = STATE.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  openModal('bonusModal');
+}
+
+function calcHoursFromTS(inTS, outTS) {
+  const mins = (new Date(outTS) - new Date(inTS)) / 60000;
+  return `${Math.floor(mins/60)}h ${Math.round(mins%60)}m`;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+document.addEventListener('click', e => {
+  const sb2 = document.getElementById('sidebar');
+  if(window.innerWidth<=768 && sb2.classList.contains('open') && !sb2.contains(e.target)) sb2.classList.remove('open');
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await loadUserAndStart(session.user);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
