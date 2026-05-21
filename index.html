@@ -527,6 +527,7 @@ async function loadUserAndStart(user) {
   STATE.admin = adminData;
   STATE.org = orgData;
   await loadStaff();
+  await loadSettings();
   showApp();
 }
 
@@ -568,9 +569,10 @@ const NAV = [
   { id:'leave',         label:'Leave',        icon:'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18' },
   { id:'payroll',       label:'Payroll',      icon:'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
   { id:'staff',         label:'Staff',        icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0' },
+  { id:'settings',      label:'Settings',     icon:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z' },
 ];
 
-const PAGE_TITLES = { dashboard:'Dashboard', team_calendar:'Team rota', attendance:'Attendance', timesheets:'Timesheets', leave:'Leave requests', payroll:'Payroll', staff:'Staff' };
+const PAGE_TITLES = { dashboard:'Dashboard', team_calendar:'Team rota', attendance:'Attendance', timesheets:'Timesheets', leave:'Leave requests', payroll:'Payroll', staff:'Staff', settings:'Settings' };
 
 function iconSvg(path, size=16) {
   return `<svg width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="${path}"/></svg>`;
@@ -597,7 +599,7 @@ function toggleSidebar() { document.getElementById('sidebar').classList.toggle('
 // ── PAGES ─────────────────────────────────────────────────────────────────────
 function renderPage() {
   const el = document.getElementById('pageContent');
-  const pages = { dashboard:pageDashboard, team_calendar:pageTeamCalendar, attendance:pageAttendance, timesheets:pageTimesheets, leave:pageLeave, payroll:pagePayroll, staff:pageStaff };
+  const pages = { dashboard:pageDashboard, team_calendar:pageTeamCalendar, attendance:pageAttendance, timesheets:pageTimesheets, leave:pageLeave, payroll:pagePayroll, staff:pageStaff, settings:pageSettings };
   const fn = pages[STATE.page];
   if (fn) fn(el).catch && fn(el).catch(e => el.innerHTML = `<p>Error: ${e.message}</p>`);
   else el.innerHTML = '<p>Page not found</p>';
@@ -755,7 +757,81 @@ async function pageTeamCalendar(el) {
 function calPrev(){ STATE.calMonth--; if(STATE.calMonth<0){STATE.calMonth=11;STATE.calYear--;} renderPage(); }
 function calNext(){ STATE.calMonth++; if(STATE.calMonth>11){STATE.calMonth=0;STATE.calYear++;} renderPage(); }
 
-async function pageAttendance(el) {
+async function pageSettings(el) {
+  el.innerHTML = `<div class="loading">Loading settings...</div>`;
+  const { data: settings } = await sb.from('settings').select('*').eq('org_id', STATE.org.id).maybeSingle();
+  const s = settings || {};
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Manage your organisation and preferences</div>
+    </div>
+    <div class="grid-2 gap-16">
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:16px">Organisation details</div>
+        <div class="form-group"><label class="form-label">Business name</label><input type="text" class="form-input" id="settingOrgName" value="${STATE.org?.name||''}"></div>
+        <div class="form-group"><label class="form-label">Business type</label>
+          <select class="form-input form-select" id="settingOrgType">
+            ${['dental','salon','restaurant','care','gym','retail','office','other'].map(t=>`<option value="${t}" ${STATE.org?.business_type===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="saveOrgSettings()">Save changes</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:16px">Accountant details</div>
+        <div class="form-group"><label class="form-label">Accountant name</label><input type="text" class="form-input" id="settingAccName" value="${s.accountant_name||''}" placeholder="e.g. John Smith"></div>
+        <div class="form-group"><label class="form-label">Accountant email</label><input type="email" class="form-input" id="settingAccEmail" value="${s.accountant_email||''}" placeholder="accountant@example.com"></div>
+        <div class="form-group"><label class="form-label">Payroll approval day</label>
+          <select class="form-input form-select" id="settingPayDay">
+            ${[25,26,27,28,29,30].map(d=>`<option value="${d}" ${(s.payroll_day||28)===d?'selected':''}>${d}th of each month</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="saveAccountantSettings()">Save accountant details</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:16px">Kiosk</div>
+        <div class="text-sm text-muted mb-12">Your kiosk check-in screen is available at:</div>
+        <div style="background:var(--surface2);padding:10px 14px;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:12px">ourshift.co.uk/kiosk.html</div>
+        <button class="btn btn-secondary" onclick="window.open('/kiosk.html','_blank')">Open kiosk →</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:16px">Account</div>
+        <div class="text-sm text-muted mb-4">Logged in as</div>
+        <div style="font-weight:500;margin-bottom:4px">${STATE.admin?.name||''}</div>
+        <div class="text-sm text-muted mb-16">${STATE.admin?.email||''}</div>
+        <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>`;
+}
+
+async function saveOrgSettings() {
+  const name = document.getElementById('settingOrgName').value.trim();
+  const type = document.getElementById('settingOrgType').value;
+  if (!name) { showToast('Please enter a business name'); return; }
+  const { error } = await sb.from('organisations').update({ name, business_type: type }).eq('id', STATE.org.id);
+  if (error) { showToast('Error: '+error.message); return; }
+  STATE.org.name = name;
+  STATE.org.business_type = type;
+  document.getElementById('sidebarOrgName').textContent = name;
+  document.getElementById('topbarOrg').textContent = name;
+  showToast('Business details saved');
+}
+
+async function saveAccountantSettings() {
+  const accName = document.getElementById('settingAccName').value.trim();
+  const accEmail = document.getElementById('settingAccEmail').value.trim();
+  const payDay = parseInt(document.getElementById('settingPayDay').value);
+  const { error } = await sb.from('settings').upsert({
+    org_id: STATE.org.id,
+    accountant_name: accName,
+    accountant_email: accEmail,
+    payroll_day: payDay,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'org_id' });
+  if (error) { showToast('Error: '+error.message); return; }
+  STATE.settings = { accountant_name: accName, accountant_email: accEmail, payroll_day: payDay };
+  showToast('Accountant details saved');
+}
   el.innerHTML = `<div class="page-header"><div class="page-title">Attendance</div><div class="page-sub">Today · ${formatDate(TODAY)}</div></div><div class="loading">Loading check-ins...</div>`;
   const { data: checkins } = await sb.from('check_ins').select('*, staff(name,color,color_light)').eq('org_id', STATE.org.id).eq('date', todayStr);
   const ci = checkins || [];
@@ -911,7 +987,7 @@ async function pagePayroll(el) {
       <div><div class="page-title">Payroll</div><div class="page-sub">${TODAY.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div></div>
       <div class="flex-center gap-8">
         <button class="btn btn-secondary btn-sm" onclick="openBonusModal()">+ Bonus / deduction</button>
-        <button class="btn btn-primary btn-sm" onclick="showToast('Payroll approved — accountant notified')">Approve & send</button>
+        <button class="btn btn-primary btn-sm" onclick="approveAndSendPayroll()">Approve & send</button>
       </div>
     </div>
     <div class="card">
@@ -972,121 +1048,4 @@ async function saveStaff() {
     contracted_hours: hours, work_days: selectedDays.length,
     working_days_array: selectedDays,
     holiday_allowance: holiday,
-    color: col.c, color_light: col.l
-  });
-  if (error) { showToast('Error: '+error.message); return; }
-  await loadStaff();
-  closeModal('addStaffModal');
-  showToast(`${name} added`);
-  ['staffName','staffRole','staffRate','staffHours','staffHoliday'].forEach(id => document.getElementById(id).value='');
-  // Reset checkboxes to Mon-Fri
-  [1,2,3,4,5].forEach(d => document.getElementById('day_'+d).checked = true);
-  [0,6].forEach(d => document.getElementById('day_'+d).checked = false);
-  renderPage();
-}
-
-async function saveBonus() {
-  const staffId = document.getElementById('bonusStaffSel').value;
-  const type = document.getElementById('bonusType').value;
-  const amount = parseFloat(document.getElementById('bonusAmount').value||0);
-  const reason = document.getElementById('bonusReason').value;
-  if (!staffId || !amount) { showToast('Please fill in all fields'); return; }
-  const { error } = await sb.from('bonuses').insert({ org_id:STATE.org.id, staff_id:staffId, type, amount, reason });
-  if (error) { showToast('Error: '+error.message); return; }
-  closeModal('bonusModal'); showToast(`${type} of £${amount.toFixed(2)} added`);
-  if (STATE.page==='payroll') pagePayroll(document.getElementById('pageContent'));
-}
-
-function openEditStaff(id) {
-  const s = STATE.staff.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('editStaffId').value = s.id;
-  document.getElementById('editStaffName').value = s.name;
-  document.getElementById('editStaffRole').value = s.role || '';
-  document.getElementById('editStaffRate').value = s.hourly_rate || 0;
-  document.getElementById('editStaffHours').value = s.contracted_hours || 37.5;
-  document.getElementById('editStaffHoliday').value = s.holiday_allowance || 25;
-  const days = s.working_days_array && s.working_days_array.length > 0
-    ? s.working_days_array
-    : s.work_days >= 5 ? [1,2,3,4,5] : s.work_days >= 4 ? [1,2,3,4] : [1,2,3];
-  [0,1,2,3,4,5,6].forEach(d => {
-    const cb = document.getElementById('edit_day_'+d);
-    if (cb) cb.checked = days.includes(d);
-  });
-  openModal('editStaffModal');
-}
-
-async function updateStaff() {
-  const id = document.getElementById('editStaffId').value;
-  const name = document.getElementById('editStaffName').value.trim();
-  const role = document.getElementById('editStaffRole').value.trim();
-  const rate = parseFloat(document.getElementById('editStaffRate').value||0);
-  const hours = parseFloat(document.getElementById('editStaffHours').value||37.5);
-  const holiday = parseInt(document.getElementById('editStaffHoliday').value||25);
-  const selectedDays = [0,1,2,3,4,5,6].filter(d => {
-    const cb = document.getElementById('edit_day_'+d);
-    return cb && cb.checked;
-  });
-  if (!name) { showToast('Please enter a name'); return; }
-  if (selectedDays.length === 0) { showToast('Please select at least one working day'); return; }
-  const { error } = await sb.from('staff').update({
-    name, role, hourly_rate: rate, contracted_hours: hours,
-    work_days: selectedDays.length, working_days_array: selectedDays,
-    holiday_allowance: holiday
-  }).eq('id', id);
-  if (error) { showToast('Error: '+error.message); return; }
-  await loadStaff();
-  closeModal('editStaffModal');
-  showToast(`${name} updated`);
-  renderPage();
-}
-
-async function deleteStaff() {
-  const id = document.getElementById('editStaffId').value;
-  const s = STATE.staff.find(x => x.id === id);
-  if (!confirm(`Delete ${s?.name}? This cannot be undone.`)) return;
-  const { error } = await sb.from('staff').delete().eq('id', id);
-  if (error) { showToast('Error: '+error.message); return; }
-  await loadStaff();
-  closeModal('editStaffModal');
-  showToast('Staff member deleted');
-  renderPage();
-}
-
-function openBonusModal() {
-  const sel = document.getElementById('bonusStaffSel');
-  sel.innerHTML = STATE.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  openModal('bonusModal');
-}
-
-function calcHoursFromTS(inTS, outTS) {
-  const mins = (new Date(outTS) - new Date(inTS)) / 60000;
-  return `${Math.floor(mins/60)}h ${Math.round(mins%60)}m`;
-}
-
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3000);
-}
-
-document.addEventListener('click', e => {
-  const sb2 = document.getElementById('sidebar');
-  if(window.innerWidth<=768 && sb2.classList.contains('open') && !sb2.contains(e.target)) sb2.classList.remove('open');
-});
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
-async function init() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    await loadUserAndStart(session.user);
-  }
-}
-
-init();
-</script>
-</body>
-</html>
+    color: col.c, color_
