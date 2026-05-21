@@ -203,11 +203,28 @@ tr:hover td{background:var(--surface2)}
         <input type="password" class="form-input" id="loginPassword" placeholder="••••••••">
       </div>
       <button class="btn-brand" onclick="doLogin()">Sign in</button>
+      <div style="text-align:center;margin-top:12px"><a onclick="showScreen('forgotScreen')" style="font-size:13px;color:var(--brand);cursor:pointer;text-decoration:none">Forgot your password?</a></div>
       <div class="auth-switch">New to OurShift? <a onclick="showScreen('registerScreen')">Create an account</a></div>
     </div>
   </div>
 
-  <!-- REGISTER -->
+  <!-- FORGOT PASSWORD -->
+  <div class="auth-wrap" id="forgotScreen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">OurShift</div>
+      <div class="auth-tagline">Staff management for any business</div>
+      <div class="auth-title">Reset your password</div>
+      <div class="auth-sub">Enter your email and we'll send you a reset link</div>
+      <div class="auth-error" id="forgotError"></div>
+      <div class="auth-success" id="forgotSuccess"></div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" class="form-input" id="forgotEmail" placeholder="you@example.com">
+      </div>
+      <button class="btn-brand" onclick="doForgotPassword()">Send reset link</button>
+      <div class="auth-switch"><a onclick="showScreen('loginScreen')">← Back to sign in</a></div>
+    </div>
+  </div>
   <div class="auth-wrap" id="registerScreen" style="display:none">
     <div class="auth-card">
       <div class="auth-logo">OurShift</div>
@@ -305,7 +322,18 @@ tr:hover td{background:var(--surface2)}
         <div class="form-group"><label class="form-label">Contracted hrs/week</label><input type="number" class="form-input" id="staffHours" placeholder="37.5" step="0.5" min="0"></div>
       </div>
       <div class="grid-2">
-        <div class="form-group"><label class="form-label">Working days/week</label><select class="form-input form-select" id="staffDays"><option value="5">5 days (Mon–Fri)</option><option value="4">4 days</option><option value="3">3 days</option><option value="6">6 days</option></select></div>
+        <div class="form-group">
+        <label class="form-label">Working days</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_1" value="1" checked style="cursor:pointer"> Mon</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_2" value="2" checked style="cursor:pointer"> Tue</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_3" value="3" checked style="cursor:pointer"> Wed</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_4" value="4" checked style="cursor:pointer"> Thu</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_5" value="5" checked style="cursor:pointer"> Fri</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_6" value="6" style="cursor:pointer"> Sat</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="day_0" value="0" style="cursor:pointer"> Sun</label>
+        </div>
+      </div>
         <div class="form-group"><label class="form-label">Holiday allowance (days)</label><input type="number" class="form-input" id="staffHoliday" placeholder="25" min="0"></div>
       </div>
       <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="saveStaff()">Add staff member</button>
@@ -383,9 +411,23 @@ const COLORS = [
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function showScreen(id) {
-  ['loginScreen','registerScreen'].forEach(s => {
+  ['loginScreen','registerScreen','forgotScreen'].forEach(s => {
     document.getElementById(s).style.display = s === id ? 'flex' : 'none';
   });
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  const err = document.getElementById('forgotError');
+  const suc = document.getElementById('forgotSuccess');
+  err.classList.remove('show'); suc.classList.remove('show');
+  if (!email) { err.textContent = 'Please enter your email address.'; err.classList.add('show'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://ourshift.co.uk'
+  });
+  if (error) { err.textContent = error.message; err.classList.add('show'); return; }
+  suc.textContent = 'Password reset email sent — check your inbox.';
+  suc.classList.add('show');
 }
 
 async function doLogin() {
@@ -608,8 +650,11 @@ function pageTeamCalendar(el) {
   function workingStaff(ds) {
     const d = new Date(ds+'T00:00:00');
     const dow = d.getDay();
-    if(dow===0) return [];
+    if(dow===0 && !STATE.staff.some(s => (s.working_days_array||[]).includes(0))) return [];
     return STATE.staff.filter(s => {
+      const customDays = s.working_days_array;
+      if (customDays && customDays.length > 0) return customDays.includes(dow);
+      // Fallback for old staff records without custom days
       const sched = s.work_days>=5?[1,2,3,4,5]:s.work_days>=4?[1,2,3,4]:[1,2,3];
       return sched.includes(dow);
     });
@@ -850,14 +895,23 @@ async function saveStaff() {
   const role = document.getElementById('staffRole').value.trim();
   const rate = parseFloat(document.getElementById('staffRate').value||0);
   const hours = parseFloat(document.getElementById('staffHours').value||37.5);
-  const days = parseInt(document.getElementById('staffDays').value||5);
   const holiday = parseInt(document.getElementById('staffHoliday').value||25);
   if (!name) { showToast('Please enter a name'); return; }
+
+  // Get selected days as array e.g. [1,2,3,4,5]
+  const selectedDays = [0,1,2,3,4,5,6].filter(d => {
+    const cb = document.getElementById('day_'+d);
+    return cb && cb.checked;
+  });
+  if (selectedDays.length === 0) { showToast('Please select at least one working day'); return; }
+
   const colorIdx = STATE.staff.length % COLORS.length;
   const col = COLORS[colorIdx];
   const { error } = await sb.from('staff').insert({
     org_id: STATE.org.id, name, role, hourly_rate: rate,
-    contracted_hours: hours, work_days: days, holiday_allowance: holiday,
+    contracted_hours: hours, work_days: selectedDays.length,
+    working_days_array: selectedDays,
+    holiday_allowance: holiday,
     color: col.c, color_light: col.l
   });
   if (error) { showToast('Error: '+error.message); return; }
@@ -865,6 +919,9 @@ async function saveStaff() {
   closeModal('addStaffModal');
   showToast(`${name} added`);
   ['staffName','staffRole','staffRate','staffHours','staffHoliday'].forEach(id => document.getElementById(id).value='');
+  // Reset checkboxes to Mon-Fri
+  [1,2,3,4,5].forEach(d => document.getElementById('day_'+d).checked = true);
+  [0,6].forEach(d => document.getElementById('day_'+d).checked = false);
   renderPage();
 }
 
