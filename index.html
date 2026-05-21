@@ -740,11 +740,12 @@ async function pageTeamCalendar(el) {
           const isToday = cell.ds===todayStr;
           const isWe = idx%7>=5;
           const ws = workingStaff(cell.ds);
+          const ol = onLeaveStaff(cell.ds);
           return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;padding:6px 5px;background:${isToday?'var(--brand-light)':isWe?'var(--surface2)':'var(--surface)'}">
             <div style="font-size:13px;font-weight:${isToday?700:500};color:${isToday?'var(--brand)':isWe?'var(--text3)':'var(--text)'};margin-bottom:4px">${cell.d}</div>
             ${isWe?'<div style="font-size:10px;color:var(--text3)">Closed</div>':
               ws.map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:${s.color_light};color:${s.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')+
-              onLeaveStaff(cell.ds).map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:#fef3e0;color:#b86b00;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:#b86b00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')}
+              ol.map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px" title="${s.name} — on leave"><div style="width:16px;height:16px;border-radius:50%;background:#fef3e0;color:#b86b00;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:#b86b00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px;font-style:italic">${s.name}</span></div>`).join('')}
           </div>`;
         }).join('')}
       </div>
