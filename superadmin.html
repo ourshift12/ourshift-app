@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OurShift — Super Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f7f6f2;color:#1a1916;font-size:14px;min-height:100vh}
+.topbar{background:#1a1916;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:16px;font-weight:600;color:#e8440a;letter-spacing:-.3px}
+.logo-badge{font-size:11px;font-weight:500;background:#e8440a22;color:#e8440a;padding:2px 8px;border-radius:20px;margin-left:8px}
+.topbar-right{font-size:12px;color:#6b6a65}
+.content{padding:24px;max-width:900px;margin:0 auto}
+.page-title{font-size:22px;font-weight:600;margin-bottom:4px;letter-spacing:-.3px}
+.page-sub{font-size:13px;color:#6b6a65;margin-bottom:24px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 20px}
+.stat-val{font-size:28px;font-weight:600;margin-bottom:4px}
+.stat-lbl{font-size:12px;color:#6b6a65}
+.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.card-head{padding:16px 20px;border-bottom:1px solid rgba(0,0,0,.08);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:15px;font-weight:600}
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:#6b6a65;transition:all .15s}
+.tab.active{background:#fff;color:#1a1916;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:#9e9d98;text-transform:uppercase;letter-spacing:.06em;padding:10px 20px;border-bottom:1px solid rgba(0,0,0,.08)}
+td{padding:14px 20px;border-bottom:1px solid rgba(0,0,0,.06);font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f7f6f2}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px}
+.badge-pending{background:#fff1ec;color:#e8440a}
+.badge-approved{background:#eaf4ea;color:#2e7d32}
+.badge-rejected{background:#fdecea;color:#c0392b}
+.btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-approve{background:#eaf4ea;color:#2e7d32}
+.btn-approve:hover{background:#d4edda}
+.btn-reject{background:#fdecea;color:#c0392b}
+.btn-reject:hover{background:#f8d7da}
+.btn-primary{background:#e8440a;color:#fff}
+.btn-primary:hover{background:#d03a08}
+.empty{text-align:center;padding:48px;color:#9e9d98}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading{text-align:center;padding:40px;color:#9e9d98}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f7f6f2}
+.login-card{background:#fff;border-radius:12px;border:1px solid rgba(0,0,0,.08);padding:40px;width:100%;max-width:380px}
+.login-logo{font-size:22px;font-weight:600;color:#e8440a;margin-bottom:4px}
+.login-title{font-size:18px;font-weight:600;margin-bottom:6px;margin-top:24px}
+.login-sub{font-size:13px;color:#6b6a65;margin-bottom:24px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:#6b6a65;margin-bottom:5px;display:block}
+.form-input{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,.14);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s}
+.form-input:focus{border-color:#e8440a}
+.login-error{background:#fdecea;color:#c0392b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.login-error.show{display:block}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:420px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1916;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none}
+.toast.show{display:block}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">OurShift</div>
+    <div style="font-size:11px;color:#9e9d98">Super Admin Panel</div>
+    <div class="login-title">Sign in</div>
+    <div class="login-sub">OurShift team access only</div>
+    <div class="login-error" id="loginErr"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="saEmail" placeholder="your@email.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-input" id="saPassword" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Super admin key</label>
+      <input type="password" class="form-input" id="saKey" placeholder="Secret key">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;margin-top:8px" onclick="saLogin()">Sign in</button>
+  </div>
+</div>
+
+<!-- MAIN PANEL -->
+<div id="mainPanel" style="display:none">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="logo">OurShift</div>
+      <span class="logo-badge">Super Admin</span>
+    </div>
+    <div class="topbar-right" id="topbarInfo"></div>
+  </div>
+
+  <div class="content">
+    <div class="page-title">Super Admin Panel</div>
+    <div class="page-sub" id="lastRefresh">Loading...</div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="statPending" style="color:#e8440a">—</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat"><div class="stat-val" id="statApproved" style="color:#2e7d32">—</div><div class="stat-lbl">Approved</div></div>
+      <div class="stat"><div class="stat-val" id="statRejected" style="color:#c0392b">—</div><div class="stat-lbl">Rejected</div></div>
+      <div class="stat"><div class="stat-val" id="statOrgs">—</div><div class="stat-lbl">Live orgs</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('pending',this)">Pending applications</button>
+      <button class="tab" onclick="switchTab('approved',this)">Approved</button>
+      <button class="tab" onclick="switchTab('rejected',this)">Rejected</button>
+      <button class="tab" onclick="switchTab('orgs',this)">Live organisations</button>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" id="tableTitle">Pending applications</div>
+        <button class="btn btn-primary" onclick="loadAll()">↻ Refresh</button>
+      </div>
+      <div id="tableContent"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-title">Reject application</div>
+    <input type="hidden" id="rejectId">
+    <div class="form-group">
+      <label class="form-label">Reason (optional — shown to applicant)</label>
+      <textarea class="form-input" id="rejectReason" rows="3" placeholder="e.g. We are not currently accepting new signups in your area"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn" style="background:#f0efe9;color:#6b6a65" onclick="closeReject()">Cancel</button>
+      <button class="btn btn-reject" onclick="confirmReject()">Confirm rejection</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://rgekvctefndgxuwqfwlb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnZWt2Y3RlZm5kZ3h1d3Fmd2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTM4NDUsImV4cCI6MjA5NDkyOTg0NX0.41wu5uT8Jo8hgdXDfzlDS0JUbaFF_JiKJ8ntWaxCRH4';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Your secret key — change this to something only you know
+const SUPER_KEY = 'OurShiftAdmin2026!';
+const SUPER_EMAIL = 'mirzasubhan222@yahoo.com';
+
+let currentTab = 'pending';
+let allData = { pending:[], approved:[], rejected:[], orgs:[] };
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+async function saLogin() {
+  const email = document.getElementById('saEmail').value.trim();
+  const pw = document.getElementById('saPassword').value;
+  const key = document.getElementById('saKey').value;
+  const err = document.getElementById('loginErr');
+  err.classList.remove('show');
+
+  if (key !== SUPER_KEY) {
+    err.textContent = 'Invalid super admin key.';
+    err.classList.add('show');
+    return;
+  }
+
+  if (email !== SUPER_EMAIL) {
+    err.textContent = 'Unauthorised email address.';
+    err.classList.add('show');
+    return;
+  }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { err.textContent = error.message; err.classList.add('show'); return; }
+
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('mainPanel').style.display = 'block';
+  document.getElementById('topbarInfo').textContent = `Logged in as ${email}`;
+  await loadAll();
+}
+
+async function loadAll() {
+  document.getElementById('lastRefresh').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString('en-GB');
+
+  const [pending, approved, rejected, orgs] = await Promise.all([
+    sb.from('pending_signups').select('*').eq('status','pending').order('applied_at',{ascending:false}),
+    sb.from('pending_signups').select('*').eq('status','approved').order('reviewed_at',{ascending:false}),
+    sb.from('pending_signups').select('*').eq('status','rejected').order('reviewed_at',{ascending:false}),
+    sb.from('organisations').select('*, admins(name,email)').order('created_at',{ascending:false})
+  ]);
+
+  allData.pending = pending.data || [];
+  allData.approved = approved.data || [];
+  allData.rejected = rejected.data || [];
+  allData.orgs = orgs.data || [];
+
+  document.getElementById('statPending').textContent = allData.pending.length;
+  document.getElementById('statApproved').textContent = allData.approved.length;
+  document.getElementById('statRejected').textContent = allData.rejected.length;
+  document.getElementById('statOrgs').textContent = allData.orgs.length;
+
+  renderTable();
+}
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const titles = { pending:'Pending applications', approved:'Approved applications', rejected:'Rejected applications', orgs:'Live organisations' };
+  document.getElementById('tableTitle').textContent = titles[tab];
+  renderTable();
+}
+
+function renderTable() {
+  const el = document.getElementById('tableContent');
+
+  if (currentTab === 'pending') {
+    const data = allData.pending;
+    if (!data.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>No pending applications</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Name</th><th>Business</th><th>Type</th><th>Email</th><th>Applied</th><th>Actions</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.business_name}</td>
+        <td style="text-transform:capitalize">${r.business_type||'—'}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.email}</td>
+        <td style="font-size:12px;color:#6b6a65">${new Date(r.applied_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-approve" onclick="approve('${r.id}','${r.name}','${r.email}','${r.business_name}','${r.business_type}','${r.password_hash}')">✓ Approve</button>
+            <button class="btn btn-reject" onclick="openReject('${r.id}')">✗ Reject</button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  else if (currentTab === 'approved') {
+    const data = allData.approved;
+    if (!data.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">✓</div>No approved applications yet</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Applied</th><th>Approved</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.business_name}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.email}</td>
+        <td style="font-size:12px;color:#6b6a65">${new Date(r.applied_at).toLocaleDateString('en-GB')}</td>
+        <td style="font-size:12px;color:#2e7d32">${r.reviewed_at?new Date(r.reviewed_at).toLocaleDateString('en-GB'):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  else if (currentTab === 'rejected') {
+    const data = allData.rejected;
+    if (!data.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">✗</div>No rejected applications</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Reason</th><th>Rejected</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.business_name}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.email}</td>
+        <td style="font-size:12px;color:#6b6a65">${r.rejection_reason||'No reason given'}</td>
+        <td style="font-size:12px;color:#c0392b">${r.reviewed_at?new Date(r.reviewed_at).toLocaleDateString('en-GB'):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  else if (currentTab === 'orgs') {
+    const data = allData.orgs;
+    if (!data.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div>No live organisations yet</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Organisation</th><th>Type</th><th>Admin</th><th>Email</th><th>Created</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td style="text-transform:capitalize">${r.business_type||'—'}</td>
+        <td>${r.admins?.[0]?.name||'—'}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.admins?.[0]?.email||'—'}</td>
+        <td style="font-size:12px;color:#6b6a65">${new Date(r.created_at).toLocaleDateString('en-GB')}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+}
+
+async function approve(id, name, email, orgName, orgType, password) {
+  if (!confirm(`Approve ${name} from ${orgName}?`)) return;
+
+  try {
+    // Create auth user
+    const { data: authData, error: authErr } = await sb.auth.signUp({ email, password });
+    if (authErr && !authErr.message.includes('already registered')) {
+      showToast('Auth error: ' + authErr.message); return;
+    }
+
+    // Manually confirm email via SQL workaround — just create org and admin
+    const { data: orgData, error: orgErr } = await sb.from('organisations').insert({
+      name: orgName, business_type: orgType
+    }).select().single();
+    if (orgErr) { showToast('Org error: ' + orgErr.message); return; }
+
+    await sb.from('admins').insert({ org_id: orgData.id, email, name, role: 'admin' });
+    await sb.from('subscriptions').insert({ org_id: orgData.id, plan: 'starter', status: 'trial' });
+
+    // Update pending status
+    await sb.from('pending_signups').update({
+      status: 'approved', reviewed_at: new Date().toISOString()
+    }).eq('id', id);
+
+    // Confirm email in auth
+    await sb.rpc('confirm_user_email', { user_email: email }).catch(() => {});
+
+    showToast(`${name} approved — account created`);
+    await loadAll();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+function openReject(id) {
+  document.getElementById('rejectId').value = id;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+function closeReject() {
+  document.getElementById('rejectModal').classList.remove('open');
+}
+
+async function confirmReject() {
+  const id = document.getElementById('rejectId').value;
+  const reason = document.getElementById('rejectReason').value.trim();
+  await sb.from('pending_signups').update({
+    status: 'rejected',
+    rejection_reason: reason || null,
+    reviewed_at: new Date().toISOString()
+  }).eq('id', id);
+  closeReject();
+  showToast('Application rejected');
+  await loadAll();
+}
+</script>
+</body>
+</html>
