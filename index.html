@@ -359,7 +359,40 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<div class="modal-overlay" id="bonusModal">
+<div class="modal-overlay" id="editStaffModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit staff member</div>
+      <button class="modal-close" onclick="closeModal('editStaffModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editStaffId">
+      <div class="form-group"><label class="form-label">Full name</label><input type="text" class="form-input" id="editStaffName"></div>
+      <div class="form-group"><label class="form-label">Job role</label><input type="text" class="form-input" id="editStaffRole"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Hourly rate (£)</label><input type="number" class="form-input" id="editStaffRate" step="0.01" min="0"></div>
+        <div class="form-group"><label class="form-label">Contracted hrs/week</label><input type="number" class="form-input" id="editStaffHours" step="0.5" min="0"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Working days</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_1" value="1" style="cursor:pointer"> Mon</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_2" value="2" style="cursor:pointer"> Tue</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_3" value="3" style="cursor:pointer"> Wed</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_4" value="4" style="cursor:pointer"> Thu</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_5" value="5" style="cursor:pointer"> Fri</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_6" value="6" style="cursor:pointer"> Sat</label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer"><input type="checkbox" id="edit_day_0" value="0" style="cursor:pointer"> Sun</label>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Holiday allowance (days)</label><input type="number" class="form-input" id="editStaffHoliday" min="0"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-danger btn-sm" onclick="deleteStaff()">Delete staff</button>
+        <button class="btn btn-primary btn-block" onclick="updateStaff()">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
       <div class="modal-title">Add bonus / deduction</div>
@@ -609,6 +642,7 @@ function pageDashboard(el) {
 }
 
 function pageStaff(el) {
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   el.innerHTML = `
     <div class="page-header flex-between">
       <div><div class="page-title">Staff</div><div class="page-sub">${STATE.staff.length} members</div></div>
@@ -617,16 +651,22 @@ function pageStaff(el) {
     <div class="card">
       ${STATE.staff.length === 0 ? `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No staff added yet</div><div class="empty-sub">Click "Add staff" to add your first team member</div></div>` :
       `<div class="table-wrap"><table>
-        <thead><tr><th>Name</th><th>Role</th><th>Rate</th><th>Hours/wk</th><th>Days/wk</th><th>Holiday</th></tr></thead>
+        <thead><tr><th>Name</th><th>Role</th><th>Rate</th><th>Hours/wk</th><th>Working days</th><th>Holiday</th><th>Action</th></tr></thead>
         <tbody>
-          ${STATE.staff.map(s=>`<tr>
-            <td><div class="flex-center gap-8"><div class="avatar" style="background:${s.color_light};color:${s.color}">${getInitials(s.name)}</div>${s.name}</div></td>
-            <td class="text-muted">${s.role||'—'}</td>
-            <td class="font-mono">£${parseFloat(s.hourly_rate||0).toFixed(2)}</td>
-            <td class="font-mono">${s.contracted_hours}h</td>
-            <td>${s.work_days} days</td>
-            <td>${s.holiday_allowance - s.holiday_used} / ${s.holiday_allowance} left</td>
-          </tr>`).join('')}
+          ${STATE.staff.map(s=>{
+            const days = s.working_days_array && s.working_days_array.length > 0
+              ? s.working_days_array.sort((a,b)=>a-b).map(d=>DAY_NAMES[d]).join(', ')
+              : `${s.work_days} days`;
+            return `<tr>
+              <td><div class="flex-center gap-8"><div class="avatar" style="background:${s.color_light};color:${s.color}">${getInitials(s.name)}</div>${s.name}</div></td>
+              <td class="text-muted">${s.role||'—'}</td>
+              <td class="font-mono">£${parseFloat(s.hourly_rate||0).toFixed(2)}</td>
+              <td class="font-mono">${s.contracted_hours}h</td>
+              <td style="font-size:12px">${days}</td>
+              <td>${s.holiday_allowance - s.holiday_used} / ${s.holiday_allowance} left</td>
+              <td><button class="btn btn-secondary btn-sm" onclick="openEditStaff('${s.id}')">Edit</button></td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table></div>`}
     </div>`;
@@ -937,7 +977,61 @@ async function saveBonus() {
   if (STATE.page==='payroll') pagePayroll(document.getElementById('pageContent'));
 }
 
-function openBonusModal() {
+function openEditStaff(id) {
+  const s = STATE.staff.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('editStaffId').value = s.id;
+  document.getElementById('editStaffName').value = s.name;
+  document.getElementById('editStaffRole').value = s.role || '';
+  document.getElementById('editStaffRate').value = s.hourly_rate || 0;
+  document.getElementById('editStaffHours').value = s.contracted_hours || 37.5;
+  document.getElementById('editStaffHoliday').value = s.holiday_allowance || 25;
+  const days = s.working_days_array && s.working_days_array.length > 0
+    ? s.working_days_array
+    : s.work_days >= 5 ? [1,2,3,4,5] : s.work_days >= 4 ? [1,2,3,4] : [1,2,3];
+  [0,1,2,3,4,5,6].forEach(d => {
+    const cb = document.getElementById('edit_day_'+d);
+    if (cb) cb.checked = days.includes(d);
+  });
+  openModal('editStaffModal');
+}
+
+async function updateStaff() {
+  const id = document.getElementById('editStaffId').value;
+  const name = document.getElementById('editStaffName').value.trim();
+  const role = document.getElementById('editStaffRole').value.trim();
+  const rate = parseFloat(document.getElementById('editStaffRate').value||0);
+  const hours = parseFloat(document.getElementById('editStaffHours').value||37.5);
+  const holiday = parseInt(document.getElementById('editStaffHoliday').value||25);
+  const selectedDays = [0,1,2,3,4,5,6].filter(d => {
+    const cb = document.getElementById('edit_day_'+d);
+    return cb && cb.checked;
+  });
+  if (!name) { showToast('Please enter a name'); return; }
+  if (selectedDays.length === 0) { showToast('Please select at least one working day'); return; }
+  const { error } = await sb.from('staff').update({
+    name, role, hourly_rate: rate, contracted_hours: hours,
+    work_days: selectedDays.length, working_days_array: selectedDays,
+    holiday_allowance: holiday
+  }).eq('id', id);
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('editStaffModal');
+  showToast(`${name} updated`);
+  renderPage();
+}
+
+async function deleteStaff() {
+  const id = document.getElementById('editStaffId').value;
+  const s = STATE.staff.find(x => x.id === id);
+  if (!confirm(`Delete ${s?.name}? This cannot be undone.`)) return;
+  const { error } = await sb.from('staff').delete().eq('id', id);
+  if (error) { showToast('Error: '+error.message); return; }
+  await loadStaff();
+  closeModal('editStaffModal');
+  showToast('Staff member deleted');
+  renderPage();
+}
   const sel = document.getElementById('bonusStaffSel');
   sel.innerHTML = STATE.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   openModal('bonusModal');
