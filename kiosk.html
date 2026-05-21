@@ -253,7 +253,8 @@ function showConfirmation(staff, type, time){
   bar.style.animation = 'fillBar 3s linear forwards';
 
   showScreen('confirmScreen');
-  setTimeout(()=>{
+  setTimeout(async ()=>{
+    await renderStaff();
     showScreen('waitingScreen');
   }, 3000);
 }
