@@ -368,6 +368,8 @@ async function deleteOrg(id, name) {
   showToast(`${name} deleted permanently`);
   await loadAll();
 }
+
+function openReject(id) {
   document.getElementById('rejectId').value = id;
   document.getElementById('rejectReason').value = '';
   document.getElementById('rejectModal').classList.add('open');
