@@ -321,7 +321,7 @@ async function approve(id, name, email, orgName, orgType, password) {
     }).eq('id', id);
 
     // Confirm email in auth
-    await sb.rpc('confirm_user_email', { user_email: email }).catch(() => {});
+    try { await sb.rpc('confirm_user_email', { user_email: email }); } catch(e) {}
 
     showToast(`${name} approved — account created`);
     await loadAll();
