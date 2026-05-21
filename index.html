@@ -527,6 +527,16 @@ async function loadUserAndStart(user) {
   }
   if (!adminData) { showToast('Account not found. Please register.'); doLogout(); return; }
   const { data: orgData } = await sb.from('organisations').select('*').eq('id', adminData.org_id).single();
+  if (orgData?.status === 'suspended') {
+    showToast('Your account has been suspended. Please contact support.');
+    doLogout();
+    return;
+  }
+  if (orgData?.status === 'paused') {
+    showToast('Your account is temporarily paused. Please contact support.');
+    doLogout();
+    return;
+  }
   STATE.admin = adminData;
   STATE.org = orgData;
   await loadStaff();
