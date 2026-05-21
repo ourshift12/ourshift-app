@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>OurShift — Kiosk</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:#1a1916;color:#fff;min-height:100vh;overflow:hidden;user-select:none}
+
+/* WAITING SCREEN */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .3s}
+.screen.hidden{opacity:0;pointer-events:none}
+
+.waiting{background:#1a1916}
+.waiting-logo{font-size:32px;font-weight:600;color:#e8440a;letter-spacing:-.5px;margin-bottom:8px}
+.waiting-sub{font-size:16px;color:#6b6a65;margin-bottom:60px}
+.waiting-time{font-size:72px;font-weight:300;color:#fff;letter-spacing:-2px;font-variant-numeric:tabular-nums;margin-bottom:8px}
+.waiting-date{font-size:18px;color:#6b6a65;margin-bottom:60px}
+.waiting-prompt{font-size:20px;color:#9e9d98;margin-bottom:40px}
+.staff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:560px;padding:0 20px}
+.staff-btn{background:#2c2c2a;border:1.5px solid #444441;border-radius:16px;padding:18px 12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:8px}
+.staff-btn:hover{background:#3d3d3a;border-color:#5f5e5a;transform:scale(1.02)}
+.staff-btn:active{transform:scale(0.97)}
+.staff-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;flex-shrink:0}
+.staff-name{font-size:13px;font-weight:500;color:#fff;text-align:center;line-height:1.3}
+.staff-status{font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px}
+.status-in{background:#e8440a22;color:#e8440a}
+.status-out{background:#2e7d3222;color:#5fba5f}
+
+/* CONFIRMATION SCREEN */
+.confirm-in{background:#0d2b1a}
+.confirm-out{background:#2b0d0d}
+.confirm-icon{font-size:80px;margin-bottom:20px}
+.confirm-name{font-size:48px;font-weight:600;margin-bottom:8px;letter-spacing:-.5px}
+.confirm-action{font-size:22px;font-weight:400;margin-bottom:8px;opacity:.8}
+.confirm-time{font-size:18px;opacity:.6;margin-bottom:40px;font-variant-numeric:tabular-nums}
+.confirm-bar{width:200px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+.confirm-bar-fill{height:100%;border-radius:2px;background:#fff;animation:fillBar 3s linear forwards}
+@keyframes fillBar{from{width:0}to{width:100%}}
+
+/* PIN SCREEN */
+.pin-screen{background:#1a1916}
+.pin-title{font-size:22px;font-weight:500;margin-bottom:8px}
+.pin-sub{font-size:15px;color:#6b6a65;margin-bottom:32px}
+.pin-display{font-size:36px;letter-spacing:12px;margin-bottom:32px;min-height:48px;font-family:monospace}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:280px}
+.pin-btn{background:#2c2c2a;border:none;border-radius:12px;padding:18px;font-size:22px;font-weight:500;color:#fff;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.pin-btn:active{background:#444441;transform:scale(.95)}
+.pin-del{background:#3d1a1a;color:#e8440a}
+.cancel-btn{margin-top:20px;background:none;border:1px solid #444441;color:#6b6a65;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* ADMIN BAR */
+.admin-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.3)}
+.admin-link{font-size:12px;color:#444441;cursor:pointer;text-decoration:none}
+.admin-link:hover{color:#6b6a65}
+.org-name{font-size:12px;color:#444441}
+
+/* SETUP SCREEN */
+.setup-screen{background:#1a1916;padding:40px 20px;text-align:center}
+.setup-card{background:#2c2c2a;border-radius:16px;padding:32px;max-width:400px;width:100%}
+.setup-title{font-size:22px;font-weight:600;margin-bottom:8px}
+.setup-sub{font-size:14px;color:#9e9d98;margin-bottom:24px}
+.setup-input{width:100%;padding:12px;background:#1a1916;border:1px solid #444441;border-radius:8px;color:#fff;font-size:16px;font-family:'DM Sans',sans-serif;margin-bottom:12px}
+.setup-input:focus{outline:none;border-color:#e8440a}
+.setup-btn{width:100%;padding:14px;background:#e8440a;border:none;border-radius:8px;color:#fff;font-size:16px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif}
+.setup-btn:hover{background:#d03a08}
+.setup-error{color:#e8440a;font-size:13px;margin-bottom:12px;display:none}
+
+@media(max-width:480px){
+  .waiting-time{font-size:52px}
+  .staff-grid{grid-template-columns:repeat(2,1fr)}
+  .confirm-name{font-size:36px}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN (shown if no org set) -->
+<div class="screen setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <div style="font-size:28px;font-weight:600;color:#e8440a;margin-bottom:4px">OurShift</div>
+    <div class="setup-title">Kiosk setup</div>
+    <div class="setup-sub">Enter your admin email and password to activate this kiosk</div>
+    <div class="setup-error" id="setupError"></div>
+    <input type="email" class="setup-input" id="setupEmail" placeholder="Admin email">
+    <input type="password" class="setup-input" id="setupPassword" placeholder="Password">
+    <button class="setup-btn" onclick="setupKiosk()">Activate kiosk</button>
+  </div>
+</div>
+
+<!-- WAITING SCREEN -->
+<div class="screen waiting hidden" id="waitingScreen">
+  <div class="waiting-logo">OurShift</div>
+  <div class="waiting-sub" id="kioskOrgName">—</div>
+  <div class="waiting-time" id="clockDisplay">00:00</div>
+  <div class="waiting-date" id="dateDisplay">—</div>
+  <div class="waiting-prompt">Tap your name to check in or out</div>
+  <div class="staff-grid" id="staffGrid"></div>
+</div>
+
+<!-- CONFIRMATION SCREEN -->
+<div class="screen hidden" id="confirmScreen">
+  <div class="confirm-icon" id="confirmIcon">✓</div>
+  <div class="confirm-name" id="confirmName">—</div>
+  <div class="confirm-action" id="confirmAction">Checked in</div>
+  <div class="confirm-time" id="confirmTime">—</div>
+  <div class="confirm-bar"><div class="confirm-bar-fill" id="confirmBarFill"></div></div>
+</div>
+
+<div class="admin-bar">
+  <span class="org-name" id="adminOrgName"></span>
+  <a class="admin-link" href="/index.html">Admin dashboard →</a>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://rgekvctefndgxuwqfwlb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnZWt2Y3RlZm5kZ3h1d3Fmd2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTM4NDUsImV4cCI6MjA5NDkyOTg0NX0.41wu5uT8Jo8hgdXDfzlDS0JUbaFF_JiKJ8ntWaxCRH4';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let ORG = null;
+let STAFF = [];
+let clockInterval = null;
+
+function getInitials(name){ return name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2); }
+function fmt2(n){ return String(n).padStart(2,'0'); }
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ── CLOCK ──
+function startClock(){
+  function tick(){
+    const now = new Date();
+    document.getElementById('clockDisplay').textContent =
+      `${fmt2(now.getHours())}:${fmt2(now.getMinutes())}`;
+    document.getElementById('dateDisplay').textContent =
+      now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+  tick();
+  clockInterval = setInterval(tick, 1000);
+}
+
+// ── SETUP ──
+async function setupKiosk(){
+  const email = document.getElementById('setupEmail').value.trim();
+  const pw = document.getElementById('setupPassword').value;
+  const err = document.getElementById('setupError');
+  err.style.display = 'none';
+  if(!email||!pw){err.textContent='Please enter email and password';err.style.display='block';return;}
+  const {data,error} = await sb.auth.signInWithPassword({email,password:pw});
+  if(error){err.textContent=error.message;err.style.display='block';return;}
+  const {data:adminData} = await sb.from('admins').select('*').eq('email',email);
+  if(!adminData||adminData.length===0){err.textContent='Admin account not found';err.style.display='block';return;}
+  const {data:orgData} = await sb.from('organisations').select('*').eq('id',adminData[0].org_id).single();
+  ORG = orgData;
+  localStorage.setItem('kiosk_org_id', orgData.id);
+  localStorage.setItem('kiosk_org_name', orgData.name);
+  await loadKiosk();
+}
+
+// ── LOAD KIOSK ──
+async function loadKiosk(){
+  if(!ORG) return;
+  document.getElementById('kioskOrgName').textContent = ORG.name;
+  document.getElementById('adminOrgName').textContent = ORG.name;
+  await loadStaff();
+  renderStaff();
+  startClock();
+  showScreen('waitingScreen');
+}
+
+async function loadStaff(){
+  const {data} = await sb.from('staff').select('*').eq('org_id',ORG.id).order('name');
+  STAFF = data || [];
+}
+
+// ── RENDER STAFF GRID ──
+async function renderStaff(){
+  const today = new Date().toISOString().split('T')[0];
+  const {data:checkins} = await sb.from('check_ins').select('*').eq('org_id',ORG.id).eq('date',today);
+  const ci = checkins || [];
+
+  document.getElementById('staffGrid').innerHTML = STAFF.map(s=>{
+    const checkin = ci.find(c=>c.staff_id===s.id);
+    const isIn = checkin && !checkin.check_out_time;
+    return `<button class="staff-btn" onclick="handleTap('${s.id}')">
+      <div class="staff-avatar" style="background:${s.color_light||'#fff1ec'};color:${s.color||'#e8440a'}">${getInitials(s.name)}</div>
+      <div class="staff-name">${s.name}</div>
+      <span class="staff-status ${isIn?'status-in':'status-out'}">${isIn?'Checked in':'Not in'}</span>
+    </button>`;
+  }).join('');
+}
+
+// ── HANDLE TAP ──
+async function handleTap(staffId){
+  const s = STAFF.find(x=>x.id===staffId);
+  if(!s) return;
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const {data:existing} = await sb.from('check_ins').select('*').eq('staff_id',staffId).eq('date',today).maybeSingle();
+
+  let isCheckIn = true;
+  if(existing && !existing.check_out_time){
+    // Check out
+    isCheckIn = false;
+    const hoursWorked = (now - new Date(existing.check_in_time)) / 3600000;
+    await sb.from('check_ins').update({
+      check_out_time: now.toISOString(),
+      hours_worked: parseFloat(hoursWorked.toFixed(2)),
+      status: 'pending'
+    }).eq('id', existing.id);
+  } else if(!existing){
+    // Check in
+    await sb.from('check_ins').insert({
+      org_id: ORG.id,
+      staff_id: staffId,
+      check_in_time: now.toISOString(),
+      date: today,
+      status: 'pending'
+    });
+  } else {
+    // Already checked out today
+    showConfirmation(s, 'already', now);
+    return;
+  }
+
+  showConfirmation(s, isCheckIn ? 'in' : 'out', now);
+  await renderStaff();
+}
+
+// ── SHOW CONFIRMATION ──
+function showConfirmation(staff, type, time){
+  const screen = document.getElementById('confirmScreen');
+  screen.className = `screen ${type==='in'?'confirm-in':'confirm-out'}`;
+
+  document.getElementById('confirmIcon').textContent = type==='in' ? '✓' : '👋';
+  document.getElementById('confirmName').textContent = staff.name;
+  document.getElementById('confirmAction').textContent =
+    type==='in' ? 'Checked in' :
+    type==='out' ? 'Checked out' : 'Already checked out today';
+  document.getElementById('confirmTime').textContent =
+    `${fmt2(time.getHours())}:${fmt2(time.getMinutes())}:${fmt2(time.getSeconds())}`;
+
+  // Reset animation
+  const bar = document.getElementById('confirmBarFill');
+  bar.style.animation = 'none';
+  bar.offsetHeight;
+  bar.style.animation = 'fillBar 3s linear forwards';
+
+  showScreen('confirmScreen');
+  setTimeout(()=>{
+    showScreen('waitingScreen');
+  }, 3000);
+}
+
+// ── INIT ──
+async function init(){
+  // Check if kiosk is already set up
+  const savedOrgId = localStorage.getItem('kiosk_org_id');
+  const savedOrgName = localStorage.getItem('kiosk_org_name');
+
+  if(savedOrgId){
+    const {data:orgData} = await sb.from('organisations').select('*').eq('id',savedOrgId).single();
+    if(orgData){
+      ORG = orgData;
+      await loadKiosk();
+      return;
+    }
+  }
+  showScreen('setupScreen');
+}
+
+init();
+</script>
+</body>
+</html>
