@@ -1032,6 +1032,8 @@ async function deleteStaff() {
   showToast('Staff member deleted');
   renderPage();
 }
+
+function openBonusModal() {
   const sel = document.getElementById('bonusStaffSel');
   sel.innerHTML = STATE.staff.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   openModal('bonusModal');
