@@ -599,7 +599,8 @@ function renderPage() {
   const el = document.getElementById('pageContent');
   const pages = { dashboard:pageDashboard, team_calendar:pageTeamCalendar, attendance:pageAttendance, timesheets:pageTimesheets, leave:pageLeave, payroll:pagePayroll, staff:pageStaff };
   const fn = pages[STATE.page];
-  if (fn) fn(el); else el.innerHTML = '<p>Page not found</p>';
+  if (fn) fn(el).catch && fn(el).catch(e => el.innerHTML = `<p>Error: ${e.message}</p>`);
+  else el.innerHTML = '<p>Page not found</p>';
 }
 
 function pageDashboard(el) {
@@ -672,7 +673,8 @@ function pageStaff(el) {
     </div>`;
 }
 
-function pageTeamCalendar(el) {
+async function pageTeamCalendar(el) {
+  el.innerHTML = `<div class="loading">Loading rota...</div>`;
   const year = STATE.calYear, month = STATE.calMonth;
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month+1, 0);
@@ -687,17 +689,35 @@ function pageTeamCalendar(el) {
   while(cells.length%7!==0) cells.push(null);
   const dayHeaders = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+  // Load approved leave for this month
+  const monthStart = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const monthEnd = `${year}-${String(month+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
+  const { data: leaveData } = await sb.from('leave_requests')
+    .select('*').eq('org_id', STATE.org.id).eq('status','approved')
+    .lte('start_date', monthEnd).gte('end_date', monthStart);
+  const approvedLeave = leaveData || [];
+
+  function isOnLeave(staffId, ds) {
+    return approvedLeave.some(l =>
+      l.staff_id === staffId && l.start_date <= ds && l.end_date >= ds
+    );
+  }
+
   function workingStaff(ds) {
     const d = new Date(ds+'T00:00:00');
     const dow = d.getDay();
     if(dow===0 && !STATE.staff.some(s => (s.working_days_array||[]).includes(0))) return [];
     return STATE.staff.filter(s => {
+      if(isOnLeave(s.id, ds)) return false;
       const customDays = s.working_days_array;
       if (customDays && customDays.length > 0) return customDays.includes(dow);
-      // Fallback for old staff records without custom days
       const sched = s.work_days>=5?[1,2,3,4,5]:s.work_days>=4?[1,2,3,4]:[1,2,3];
       return sched.includes(dow);
     });
+  }
+
+  function onLeaveStaff(ds) {
+    return STATE.staff.filter(s => isOnLeave(s.id, ds));
   }
 
   el.innerHTML = `
@@ -725,7 +745,9 @@ function pageTeamCalendar(el) {
           const ws = workingStaff(cell.ds);
           return `<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:90px;padding:6px 5px;background:${isToday?'var(--brand-light)':isWe?'var(--surface2)':'var(--surface)'}">
             <div style="font-size:13px;font-weight:${isToday?700:500};color:${isToday?'var(--brand)':isWe?'var(--text3)':'var(--text)'};margin-bottom:4px">${cell.d}</div>
-            ${isWe?'<div style="font-size:10px;color:var(--text3)">Closed</div>':ws.map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:${s.color_light};color:${s.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')}
+            ${isWe?'<div style="font-size:10px;color:var(--text3)">Closed</div>':
+              ws.map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:${s.color_light};color:${s.color};font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')+
+              onLeaveStaff(cell.ds).map(s=>`<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px"><div style="width:16px;height:16px;border-radius:50%;background:#fef3e0;color:#b86b00;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${getInitials(s.name).charAt(0)}</div><span style="font-size:10px;color:#b86b00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px">${s.name}</span></div>`).join('')}
           </div>`;
         }).join('')}
       </div>
