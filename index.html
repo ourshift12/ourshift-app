@@ -690,11 +690,8 @@ async function pageTeamCalendar(el) {
   const dayHeaders = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   // Load approved leave for this month
-  const monthStart = `${year}-${String(month+1).padStart(2,'0')}-01`;
-  const monthEnd = `${year}-${String(month+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
   const { data: leaveData } = await sb.from('leave_requests')
-    .select('*').eq('org_id', STATE.org.id).eq('status','approved')
-    .lte('start_date', monthEnd).gte('end_date', monthStart);
+    .select('*').eq('org_id', STATE.org.id).eq('status','approved');
   const approvedLeave = leaveData || [];
 
   function isOnLeave(staffId, ds) {
